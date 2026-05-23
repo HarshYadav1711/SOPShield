@@ -142,22 +142,33 @@ def resolve_sop_path(name_or_path: str | Path, data_dir: Path | None = None) -> 
 
 
 def load_sop(path: Path | str) -> SOPDocument:
-    from sopshield.sop.validation import ensure_valid_sop
+    from sopshield.sop.validation import SOPLoadError, ensure_valid_sop
 
     path = Path(path)
-    if path.suffix.lower() == ".json":
-        doc = _load_json(path)
-    else:
-        raw = path.read_text(encoding="utf-8")
-        sections = _parse_sections(raw)
-        business_name = _infer_business_name(raw, path.stem)
-        doc = _build_document(path, path.stem, business_name, sections, raw, {})
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"SOP not found: {path!r}. Available: {', '.join(list_sops()) or '(none)'}"
+        )
+
+    try:
+        if path.suffix.lower() == ".json":
+            doc = _load_json(path)
+        else:
+            raw = path.read_text(encoding="utf-8-sig")
+            sections = _parse_sections(raw)
+            business_name = _infer_business_name(raw, path.stem)
+            doc = _build_document(path, path.stem, business_name, sections, raw, {})
+    except json.JSONDecodeError as exc:
+        raise SOPLoadError(path, f"invalid JSON ({exc.msg} at line {exc.lineno})") from exc
+    except OSError as exc:
+        raise SOPLoadError(path, f"cannot read file ({exc})") from exc
+
     ensure_valid_sop(doc)
     return doc
 
 
 def _load_json(path: Path) -> SOPDocument:
-    raw = path.read_text(encoding="utf-8")
+    raw = path.read_text(encoding="utf-8-sig")
     data = json.loads(raw)
     sections: list[SOPSection] = []
     for item in data.get("sections", []):

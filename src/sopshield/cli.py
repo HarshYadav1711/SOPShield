@@ -13,27 +13,17 @@ if hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
-from sopshield.providers.base import LLMProvider
-from sopshield.providers.ollama import OllamaProvider
-from sopshield.providers.rule_based import RuleBasedProvider
 from sopshield.sop.loader import data_directory, list_sops, resolve_sop_path
-from sopshield.sop.validation import SOPValidationError
+from sopshield.startup import (
+    SUPPORTED_PROVIDERS,
+    StartupError,
+    build_provider,
+    validate_sop,
+)
 from sopshield.workflow import ConversationWorkflow
 
 DEFAULT_SOP = "bloom_aesthetics_demo"
 DEFAULT_TRANSCRIPTS = Path(__file__).resolve().parents[2] / "transcripts"
-
-
-def _build_provider(name: str) -> LLMProvider:
-    if name == "rule":
-        return RuleBasedProvider()
-    if name == "ollama":
-        return OllamaProvider()
-    if name == "openai":
-        from sopshield.providers.openai_api import OpenAIProvider
-
-        return OpenAIProvider()
-    raise ValueError(f"Unknown provider: {name}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -56,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--provider",
-        choices=["rule", "ollama", "openai"],
+        choices=list(SUPPORTED_PROVIDERS),
         default="rule",
         help="LLM backend (default: rule = no API, offline)",
     )
@@ -97,22 +87,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        sop_path = resolve_sop_path(args.sop)
-    except FileNotFoundError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-
-    provider = _build_provider(args.provider)
-    try:
-        workflow = ConversationWorkflow.from_paths(
-            sop_path,
-            provider,
-            use_llm_summary=args.llm_summary,
-            use_llm_handoff_note=args.llm_handoff_note,
-        )
-    except SOPValidationError as exc:
+        sop_path = validate_sop(args.sop)
+        provider = build_provider(args.provider)
+    except StartupError as exc:
         print(exc.message(), file=sys.stderr)
         return 1
+
+    workflow = ConversationWorkflow.from_paths(
+        sop_path,
+        provider,
+        use_llm_summary=args.llm_summary,
+        use_llm_handoff_note=args.llm_handoff_note,
+    )
 
     reply = workflow.start()
     print(f"\nAssistant: {reply.message}\n")

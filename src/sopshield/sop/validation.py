@@ -7,6 +7,26 @@ from pathlib import Path
 from sopshield.sop.loader import SOPDocument
 
 
+class SOPLoadError(ValueError):
+    """Raised when a SOP file exists but cannot be parsed or read."""
+
+    def __init__(self, path: Path | str, detail: str) -> None:
+        self.path = Path(path)
+        self.detail = detail
+        super().__init__(f"Cannot load SOP {self.path.name}: {detail}")
+
+    def message(self) -> str:
+        return "\n".join(
+            [
+                f"Cannot load SOP file: {self.path}",
+                "",
+                f"  - {self.detail}",
+                "",
+                "Check that the file is valid JSON or Markdown with level-2 sections.",
+            ]
+        )
+
+
 class SOPValidationError(ValueError):
     """Raised when a SOP file is missing fields required for the workflow."""
 

@@ -7,11 +7,16 @@ from sopshield.sop.loader import (
     resolve_sop_path,
 )
 from sopshield.sop.retrieval import RetrievalResult, retrieve
-from sopshield.sop.validation import SOPValidationError, validate_sop_document
+from sopshield.sop.validation import (
+    SOPLoadError,
+    SOPValidationError,
+    validate_sop_document,
+)
 
 __all__ = [
     "SOPDocument",
     "SOPValidationError",
+    "SOPLoadError",
     "data_directory",
     "list_sops",
     "load_sop",
