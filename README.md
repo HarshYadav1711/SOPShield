@@ -4,7 +4,9 @@ SOPShield is a **SOP-first** front-desk assistant for small clinics. It runs a f
 
 Facts come from your SOP—not from model memory. If the document does not cover a topic, the assistant says so and escalates instead of guessing.
 
-**Sample businesses**
+**Runtime path:** `main.py` → `sopshield.cli` → `workflow.py` (stages + escalation). All application code lives under `src/sopshield/`; SOP content lives in `data/` as versioned JSON.
+
+**Sample businesses** (one file per business; see [data/README.md](data/README.md))
 
 | SOP id | Use case |
 |--------|----------|
@@ -23,6 +25,13 @@ Facts come from your SOP—not from model memory. If the document does not cover
 
 See [prompt_design.md](prompt_design.md) for prompts, safety layers, and escalation thresholds. Example conversations are in [test_transcripts/](test_transcripts/).
 
+### Design rationale
+
+- **Lightweight workflow** — Four fixed stages (FAQ → qualification → summary, with escalation evaluated throughout) keep transcripts easy to audit. There is no agent graph or tool loop; each turn has one job.
+- **Deterministic escalation** — Handoff decisions are regex and threshold rules in `escalation.py`, not model judgment. The same input yields the same reason code, which matters for compliance review and regression tests.
+- **Strict SOP grounding** — Retrieval gates, excerpt-only prompts, and post-checks limit invented policy. The default `RuleBasedProvider` composes answers from retrieved lines only.
+- **Multi-SOP support** — Each business is a JSON file (`document.id` + sections). The loader validates required fields and resolves `--sop <id>` without code changes, so one codebase serves multiple clinic profiles.
+
 ---
 
 ## How the workflow works
@@ -37,12 +46,13 @@ Greeting (FAQ stage)
 
 Escalation rules run **before** FAQ generation (e.g. “speak to a manager”) and **after** each FAQ attempt (e.g. low confidence). On escalation, the customer sees the SOP handoff message and the same structured summary as a normal session end.
 
-| Stage | Implementation |
-|-------|----------------|
-| 1. FAQ | `stages/faq.py` + retrieval + optional LLM |
-| 2. Qualification | `stages/qualification.py` (no LLM) |
-| 3. Escalation | `escalation.py` (regex + confidence rules) |
-| 4. Summary | `stages/summary.py` (template default; optional LLM) |
+| Stage | Module |
+|-------|--------|
+| Orchestration | `workflow.py`, `session.py` |
+| 1. FAQ | `stages/faq.py`, `sop/retrieval.py`, `sop/grounding.py`, optional `providers/` |
+| 2. Qualification | `stages/qualification.py` (templated; no LLM) |
+| 3. Escalation | `escalation.py` (lexical rules + confidence; runs before/after FAQ) |
+| 4. Summary | `stages/summary.py` (deterministic template default) |
 
 ---
 
@@ -107,23 +117,32 @@ sopshield --provider openai --llm-summary
 
 ---
 
-## Project layout
+## Architecture
 
 ```
-data/                    # Canonical SOP JSON per business (see data/README.md)
-main.py                  # CLI wrapper
+main.py                      # Entry: delegates to sopshield.cli
+pyproject.toml               # Package metadata; optional [dev|ollama|openai]
+data/
+  README.md                  # SOP schema and required fields
+  bloom_aesthetics_demo.json # Default business SOP
+  northstar_dental.json      # Second business (extended escalation config)
 src/sopshield/
-  cli.py                 # Argument parsing, interactive loop
-  workflow.py            # Stage orchestration
-  escalation.py          # Escalation rules
-  prompts.py             # System / user prompt templates
-  sop/                   # Load, list, retrieve, ground
-  stages/                # FAQ, qualification, summary
-  providers/             # rule, ollama, openai
-prompt_design.md         # Prompt and safety rationale
-test_transcripts/        # Reference conversations
-tests/                   # Pytest
-transcripts/             # Runtime logs (gitignored)
+  cli.py                     # Interactive / -m batch mode, transcript save
+  workflow.py                # Stage state machine
+  session.py                 # Turns, qualification state, transcript I/O
+  escalation.py              # Rule-based handoff triggers
+  prompts.py                 # FAQ / summary prompt templates
+  sop/
+    loader.py                # JSON load, resolve --sop id, list_sops
+    validation.py            # Required-field checks at load time
+    retrieval.py             # Lexical section retrieval
+    grounding.py             # Answer support and numeric post-check
+  stages/                    # faq, qualification, summary
+  providers/                 # rule (default), ollama, openai
+prompt_design.md             # Prompt and safety design notes
+test_transcripts/            # Reference conversations
+tests/                       # Pytest
+transcripts/                 # Per-session logs (gitignored)
 ```
 
 ---
@@ -136,32 +155,32 @@ pytest
 
 ---
 
-## Tradeoffs and limitations
+## Design tradeoffs
 
-| Choice | Benefit | Cost |
-|--------|---------|------|
-| Lexical retrieval | No embedding API; scores are inspectable | Paraphrases may score low → escalation |
-| Rule-based default | Reproducible without GPU or API keys | Less natural phrasing than a tuned LLM |
-| Regex escalation | Auditable, fast, unit-testable | Not a full sentiment or intent model |
-| JSON SOP per business | Easy to swap or version in git | No built-in SOP editor UI |
-| CLI only | Simple to ship and demo | No web widget or CRM integration |
-| Single-session FAQ miss → handoff | Fast, safe default | `repeated_unanswered` is defined for streak ≥ 2 but the CLI escalates on the first unsupported FAQ today |
+| Choice | Why | Limitation |
+|--------|-----|------------|
+| Staged workflow vs. single agent | Predictable transcripts; clear operator handoff sections | Less flexible than free-form chat |
+| Lexical retrieval | No embedding service; scores are explainable in logs | Unusual phrasing may score low → safe escalation |
+| Rule-based escalation | Same triggers in tests and production; provider-agnostic | Regex is not a full sentiment model |
+| Rule-based default provider | Runs offline; no API keys for CI | Wording is less natural than an LLM |
+| JSON SOP per business | Policy changes without redeploying code | No admin UI for editing SOPs |
+| CLI channel | Thin surface for integration testing | No web widget or CRM connector in-tree |
 
-SOPShield does **not** include a database, admin dashboard, multi-agent orchestration, or a customer-facing web UI. Those are out of scope for this reference implementation.
+The scope is intentionally narrow: one orchestrator, file-based SOPs, and optional LLM only where phrasing helps (FAQ/summary). A database, dashboard, or multi-agent layer would sit outside this package.
 
 ---
 
-## Why the implementation is intentionally minimal
+## Operational safety
 
-The goal is a **reviewable safety pattern**, not a production SaaS stack.
+- **Load-time validation** — `sop/validation.py` rejects SOPs missing `business_name`, services, escalation rules, or booking policy before a session starts.
+- **Retrieval gate** — FAQ runs only when section match confidence meets the SOP threshold (default `0.35`).
+- **Excerpt isolation** — Models see retrieved sections for the current turn, not the full document.
+- **Escalation precedence** — Complaints, clinical safety, and explicit human requests are checked before generation; low confidence and SOP gaps trigger handoff after an attempted answer.
+- **Fixed handoff copy** — Customer-facing escalation text comes from the SOP, not from model improvisation.
+- **Deterministic summary** — Six-section operator summary is template-built by default; escalation status is not re-decided by the model.
+- **Session transcripts** — Full turn log under `transcripts/` for post-incident review.
 
-- **One orchestrator** (`workflow.py`) makes the stage order obvious.
-- **Rules own escalation** so behavior does not change when you swap LLM providers.
-- **Deterministic summary by default** guarantees every session ends with the same six sections for operators.
-- **SOP as data** lets a clinic owner edit policy in JSON/Markdown without touching Python.
-- **Zero required API keys** keeps CI and local demos frictionless.
-
-You can add embeddings, a web channel, or CRM webhooks later without rewriting the stage model—the boundaries are already separated.
+Details: [prompt_design.md](prompt_design.md).
 
 ---
 
@@ -176,4 +195,4 @@ Factual answers always originate from that file. See `data/README.md` and `data/
 
 ## License
 
-Portfolio / demonstration use. SOP content is fictional sample data unless you replace it with your own policies.
+Use and modify as needed for internal workflows. Bundled SOP content is fictional sample data unless you replace it with your own policies.
