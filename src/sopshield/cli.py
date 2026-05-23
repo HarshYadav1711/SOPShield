@@ -18,7 +18,7 @@ from sopshield.providers.ollama import OllamaProvider
 from sopshield.providers.rule_based import RuleBasedProvider
 from sopshield.workflow import ConversationWorkflow
 
-DEFAULT_SOP = Path(__file__).resolve().parents[2] / "data" / "bloom_aesthetics_sop.md"
+DEFAULT_SOP = Path(__file__).resolve().parents[2] / "data" / "bloom_aesthetics_sop.json"
 DEFAULT_TRANSCRIPTS = Path(__file__).resolve().parents[2] / "transcripts"
 
 
@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
         "--sop",
         type=Path,
         default=DEFAULT_SOP,
-        help="Path to SOP markdown file",
+        help="Path to SOP file (.json or .md)",
     )
     parser.add_argument(
         "--provider",

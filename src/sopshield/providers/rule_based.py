@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import re
 
+from sopshield.prompts import FAQ_FALLBACK_NO_SOP, FAQ_FALLBACK_UNGROUNDED
 from sopshield.providers.base import LLMProvider, ProviderResponse
+from sopshield.sop.grounding import sop_supports_answer
+from sopshield.sop.loader import SOPSection
 
 # Extract answer instruction from our structured user prompt
 _CONTEXT_RE = re.compile(
     r"SOP excerpts:\s*\n(?P<context>.*?)\n\nCustomer question:",
     re.DOTALL | re.IGNORECASE,
 )
-_QUESTION_RE = re.compile(r"Customer question:\s*(?P<q>.+?)\s*$", re.DOTALL)
+_QUESTION_RE = re.compile(r"Customer question:\s*(?P<q>[^\n]+)")
 
 
 class RuleBasedProvider(LLMProvider):
@@ -24,32 +27,36 @@ class RuleBasedProvider(LLMProvider):
         question = q_match.group("q").strip() if q_match else user.strip()
 
         if not context or context.startswith("(No matching"):
-            return ProviderResponse(
-                text=(
-                    "I don't have that information in our clinic guidelines. "
-                    "I'll connect you with our front-desk team so they can help you directly."
-                ),
-                confidence=0.0,
-            )
+            return ProviderResponse(text=FAQ_FALLBACK_NO_SOP, confidence=0.0)
 
-        # Use the first SOP section in context (highest retrieval rank)
-        first_section = context.split("\n\n---\n\n")[0] if context else context
-        answer_bits = _extract_facts(first_section, question=question)
+        sections = _sections_from_context(context)
+        if not sop_supports_answer(question, sections):
+            return ProviderResponse(text=FAQ_FALLBACK_NO_SOP, confidence=0.0)
+
+        first_block = context.split("\n\n---\n\n")[0] if context else context
+        answer_bits = _extract_facts(first_block, question=question)
         if not answer_bits:
-            return ProviderResponse(
-                text=(
-                    "I want to make sure you get accurate information. "
-                    "Let me have our team follow up with you on that."
-                ),
-                confidence=0.2,
-            )
+            return ProviderResponse(text=FAQ_FALLBACK_UNGROUNDED, confidence=0.2)
 
-        body = " ".join(answer_bits[:3])
+        body = answer_bits[0]
         reply = (
-            f"Thanks for asking. Based on our clinic guidelines: {body} "
+            f"Thanks for asking. {body} "
             "If you'd like to book or need anything else, I'm happy to help."
         )
         return ProviderResponse(text=reply, confidence=0.75)
+
+
+def _sections_from_context(context: str) -> list[SOPSection]:
+    sections: list[SOPSection] = []
+    for block in context.split("\n\n---\n\n"):
+        block = block.strip()
+        if not block.startswith("## "):
+            continue
+        lines = block.split("\n", 1)
+        title = lines[0].lstrip("#").strip()
+        body = lines[1].strip() if len(lines) > 1 else ""
+        sections.append(SOPSection(title=title, body=body))
+    return sections
 
 
 def _extract_facts(context: str, question: str = "") -> list[str]:

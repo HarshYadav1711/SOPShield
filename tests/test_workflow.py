@@ -4,7 +4,7 @@ from sopshield.providers.rule_based import RuleBasedProvider
 from sopshield.session import Stage
 from sopshield.workflow import ConversationWorkflow
 
-SOP = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_sop.md"
+SOP = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_sop.json"
 
 
 def test_faq_then_qualification_flow():

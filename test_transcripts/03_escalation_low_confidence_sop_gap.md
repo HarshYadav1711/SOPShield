@@ -7,7 +7,7 @@
 
 **Customer:** Do you offer international shipping of skincare products?
 
-**Assistant:** I don't have that information in our clinic guidelines. I'll connect you with our front-desk team so they can help you directly.
+**Assistant:** I don't have that information in our clinic guidelines. A member of our front-desk team will follow up with you shortly.
 
 I'm connecting you with our front-desk team now. They'll follow up shortly at the number on your account. Support email: support@bloom-aesthetics.example (business hours).
 

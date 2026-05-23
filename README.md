@@ -2,7 +2,7 @@
 
 SOPShield is a **SOP-first** customer support workflow for SMB clinics. It simulates a full chat session in four stages—FAQ, lead qualification, escalation detection, and a structured handoff summary—while answering **only** from a documented Standard Operating Procedures file.
 
-**Sample business:** [Bloom Aesthetics Clinic](data/bloom_aesthetics_sop.md) (hours, services, booking, cancellation, escalation rules).
+**Sample business:** [Bloom Aesthetics Clinic](data/bloom_aesthetics_sop.json) (hours, services, booking, cancellation, escalation rules). A [markdown copy](data/bloom_aesthetics_sop.md) is also available.
 
 ---
 
@@ -61,7 +61,8 @@ sopshield --provider openai --llm-summary
 ## Project layout
 
 ```
-data/bloom_aesthetics_sop.md   # Source of truth (replaceable per assessment brief)
+data/bloom_aesthetics_sop.json # Structured source of truth (default)
+data/bloom_aesthetics_sop.md   # Markdown alternative (.md also supported)
 src/sopshield/
   cli.py                       # CLI entry
   workflow.py                  # Stage orchestration
@@ -127,7 +128,7 @@ Record a short screen capture showing:
 
 ## Data source
 
-All factual answers come from `data/bloom_aesthetics_sop.md`. To use another fictional SMB, replace that file and keep section headings (`##`) for retrieval. Document the path in your demo/README.
+All factual answers come from `data/bloom_aesthetics_sop.json` (or `.md`). To use another fictional SMB, replace that file—JSON uses a `sections` array with `title` and `body`; markdown uses `##` headings for retrieval.
 
 ---
 

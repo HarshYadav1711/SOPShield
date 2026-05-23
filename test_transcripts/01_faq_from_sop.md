@@ -9,7 +9,7 @@
 
 **Customer:** What are your hours on Saturday?
 
-**Assistant:** Thanks for asking. Based on our clinic guidelines: Saturday: 10:00 AM - 4:00 PM. If you'd like to book or need anything else, I'm happy to help.
+**Assistant:** Thanks for asking. Saturday: 10:00 AM - 4:00 PM If you'd like to book or need anything else, I'm happy to help.
 
 *(Qualification begins after first grounded FAQ in the live workflow.)*
 

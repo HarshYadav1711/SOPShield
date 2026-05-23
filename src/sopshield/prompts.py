@@ -18,6 +18,16 @@ Customer question: {question}
 
 Reply using only the excerpts above. If the answer is not in the excerpts, say so and offer a human handoff."""
 
+FAQ_FALLBACK_NO_SOP = (
+    "I don't have that information in our clinic guidelines. "
+    "A member of our front-desk team will follow up with you shortly."
+)
+
+FAQ_FALLBACK_UNGROUNDED = (
+    "I want to make sure you get accurate information. "
+    "Our team will follow up with you on that."
+)
+
 QUALIFICATION_INTRO = (
     "I'd like to ask a few quick questions so our team can assist you better. "
     "You can skip any question by typing 'skip'."

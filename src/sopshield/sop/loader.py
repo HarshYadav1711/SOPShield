@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,8 +30,22 @@ class SOPDocument:
 
 def load_sop(path: Path | str) -> SOPDocument:
     path = Path(path)
+    if path.suffix.lower() == ".json":
+        return _load_json(path)
     raw = path.read_text(encoding="utf-8")
     sections = _parse_sections(raw)
+    return SOPDocument(path=path, sections=sections, raw=raw)
+
+
+def _load_json(path: Path) -> SOPDocument:
+    raw = path.read_text(encoding="utf-8")
+    data = json.loads(raw)
+    sections: list[SOPSection] = []
+    for item in data.get("sections", []):
+        title = str(item.get("title", "")).strip()
+        body = str(item.get("body", "")).strip()
+        if title:
+            sections.append(SOPSection(title=title, body=body))
     return SOPDocument(path=path, sections=sections, raw=raw)
 
 
