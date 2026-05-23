@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from sopshield.prompts import qualification_intro
 from sopshield.session import QualificationAnswer, QualificationState, Session
 from sopshield.sop.loader import SOPDocument
 
@@ -44,7 +43,7 @@ def start_qualification(session: Session, sop: SOPDocument) -> str:
     """Begin qualification after FAQ; prefill from earlier messages, ask first gap."""
     prefill_from_conversation(session, sop)
     field = _next_field(session.qualification_state, sop)
-    intro = qualification_intro(sop)
+    intro = sop.conversation.qualification_intro
     if field is None:
         session.qualification_state.completed = True
         summary = format_qualification_summary(session)
@@ -141,25 +140,6 @@ def detect_client_status(text: str) -> str | None:
     if re.search(r"\bnew\b", text, re.I) and not CLIENT_RETURNING.search(text):
         return "new"
     return None
-
-
-def next_qualification_prompt(session: Session, sop: SOPDocument) -> str | None:
-    field = _next_field(session.qualification_state, sop)
-    if field is None:
-        return None
-    return _questions(sop)[field]
-
-
-def record_qualification_answer(
-    session: Session,
-    answer: str,
-    sop: SOPDocument,
-) -> str | None:
-    """Legacy API — prefer process_qualification_turn."""
-    result = process_qualification_turn(session, answer, sop)
-    if result.done:
-        return None
-    return result.reply
 
 
 def _service_patterns(sop: SOPDocument) -> list[tuple[re.Pattern[str], str]]:
@@ -286,8 +266,3 @@ def _short_label(field: str) -> str:
         FIELD_CLIENT: "Client status",
         FIELD_CONTACT: "Contact",
     }.get(field, "Detail")
-
-
-# Backward-compatible export for tests that import question list
-def qualification_questions(sop: SOPDocument) -> list[str]:
-    return list(_questions(sop).values())

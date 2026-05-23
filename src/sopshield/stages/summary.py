@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 
 from sopshield.escalation import handoff_note_deterministic
-from sopshield.prompts import SUMMARY_USER_TEMPLATE, summary_system
+from sopshield.prompts import (
+    HANDOFF_EXPLAIN_SYSTEM,
+    HANDOFF_EXPLAIN_USER,
+    SUMMARY_USER_TEMPLATE,
+    summary_system,
+)
 from sopshield.providers.base import LLMProvider
 from sopshield.session import Session
 from sopshield.sop.loader import SOPDocument
@@ -99,8 +104,6 @@ def explain_handoff(
     event = session.escalation.events[-1]
     if provider is None:
         return handoff_note_deterministic(event, sop)
-
-    from sopshield.prompts import HANDOFF_EXPLAIN_SYSTEM, HANDOFF_EXPLAIN_USER
 
     user = HANDOFF_EXPLAIN_USER.format(
         reason=event.reason.value,

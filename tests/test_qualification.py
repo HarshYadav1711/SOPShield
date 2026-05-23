@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from sopshield.providers.rule_based import RuleBasedProvider
+from sopshield.providers.rule import RuleBasedProvider
 from sopshield.session import Session, Stage
 from sopshield.sop.loader import load_sop
 from sopshield.stages.qualification import (

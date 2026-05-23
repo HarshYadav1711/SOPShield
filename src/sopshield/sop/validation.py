@@ -13,9 +13,9 @@ class SOPLoadError(ValueError):
     def __init__(self, path: Path | str, detail: str) -> None:
         self.path = Path(path)
         self.detail = detail
-        super().__init__(f"Cannot load SOP {self.path.name}: {detail}")
+        super().__init__(detail)
 
-    def message(self) -> str:
+    def __str__(self) -> str:
         return "\n".join(
             [
                 f"Cannot load SOP file: {self.path}",
@@ -33,10 +33,9 @@ class SOPValidationError(ValueError):
     def __init__(self, path: Path | str, issues: list[str]) -> None:
         self.path = Path(path)
         self.issues = issues
-        detail = "; ".join(issues)
-        super().__init__(f"SOP validation failed for {self.path.name}: {detail}")
+        super().__init__("; ".join(issues))
 
-    def message(self) -> str:
+    def __str__(self) -> str:
         lines = [f"SOP file is incomplete: {self.path}", ""]
         lines.extend(f"  - {issue}" for issue in self.issues)
         lines.append("")

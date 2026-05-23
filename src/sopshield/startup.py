@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sopshield.providers.base import LLMProvider
 from sopshield.providers.ollama import OllamaProvider
-from sopshield.providers.rule_based import RuleBasedProvider
+from sopshield.providers.rule import RuleBasedProvider
 from sopshield.sop.loader import load_sop, resolve_sop_path
 from sopshield.sop.validation import SOPLoadError, SOPValidationError
 
@@ -16,30 +16,13 @@ SUPPORTED_PROVIDERS = ("rule", "ollama", "openai")
 class StartupError(Exception):
     """Fatal startup failure with a user-facing message."""
 
-    def message(self) -> str:
-        return str(self)
-
 
 class MissingSOPError(StartupError):
     """SOP id or path could not be resolved to a file."""
 
-    def __init__(self, detail: str) -> None:
-        self.detail = detail
-        super().__init__(detail)
-
-    def message(self) -> str:
-        return self.detail
-
 
 class InvalidConfigurationError(StartupError):
     """SOP or runtime configuration is invalid."""
-
-    def __init__(self, detail: str) -> None:
-        self.detail = detail
-        super().__init__(detail)
-
-    def message(self) -> str:
-        return self.detail
 
 
 class UnsupportedProviderError(StartupError):
@@ -47,14 +30,13 @@ class UnsupportedProviderError(StartupError):
 
     def __init__(self, provider: str, detail: str) -> None:
         self.provider = provider
-        self.detail = detail
         super().__init__(detail)
 
-    def message(self) -> str:
+    def __str__(self) -> str:
         supported = ", ".join(SUPPORTED_PROVIDERS)
         return (
             f"Unsupported provider: {self.provider!r}\n\n"
-            f"  {self.detail}\n\n"
+            f"  {self.args[0]}\n\n"
             f"Supported providers: {supported}\n"
             f"Use --provider rule for offline, deterministic answers (default)."
         )
@@ -98,8 +80,8 @@ def validate_sop(sop: str | Path, data_dir: Path | None = None) -> Path:
     try:
         load_sop(path)
     except SOPValidationError as exc:
-        raise InvalidConfigurationError(exc.message()) from exc
+        raise InvalidConfigurationError(str(exc)) from exc
     except SOPLoadError as exc:
-        raise InvalidConfigurationError(exc.message()) from exc
+        raise InvalidConfigurationError(str(exc)) from exc
 
     return path

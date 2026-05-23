@@ -10,7 +10,7 @@ from pathlib import Path
 from sopshield.audit_log import log_escalation
 from sopshield.escalation import EscalationEvent, check_message, is_immediate_escalation
 from sopshield.providers.base import LLMProvider
-from sopshield.providers.rule_based import RuleBasedProvider
+from sopshield.providers.rule import RuleBasedProvider
 from sopshield.session import Session, Stage
 from sopshield.sop.loader import SOPDocument, load_sop, resolve_sop_path
 from sopshield.stages.faq import answer_faq
@@ -48,7 +48,7 @@ class ConversationWorkflow:
         self.provider = provider or RuleBasedProvider()
         self.use_llm_summary = use_llm_summary
         self.use_llm_handoff_note = use_llm_handoff_note
-        self.session = Session(session_id=_new_id())
+        self.session = Session(session_id=datetime_id())
 
     @classmethod
     def from_paths(
@@ -100,15 +100,8 @@ class ConversationWorkflow:
         )
 
     def _handle_faq(self, text: str) -> WorkflowReply:
-        pre = check_message(
-            text,
-            retrieval_confidence=1.0,
-            answered_from_sop=True,
-            state=self.session.escalation,
-            sop=self.sop,
-        )
-        if pre is not None and is_immediate_escalation(pre.reason):
-            return self._trigger_escalation(pre, confidence=1.0)
+        if reply := self._try_pre_escalation(text):
+            return reply
 
         faq = answer_faq(self.sop, text, self.provider)
         self.session.faq_count += 1
@@ -146,15 +139,8 @@ class ConversationWorkflow:
         return WorkflowReply(message=faq.reply, stage=Stage.FAQ)
 
     def _handle_qualification(self, text: str) -> WorkflowReply:
-        pre = check_message(
-            text,
-            retrieval_confidence=1.0,
-            answered_from_sop=True,
-            state=self.session.escalation,
-            sop=self.sop,
-        )
-        if pre is not None and is_immediate_escalation(pre.reason):
-            return self._trigger_escalation(pre, confidence=1.0)
+        if reply := self._try_pre_escalation(text):
+            return reply
 
         result = process_qualification_turn(self.session, text, self.sop)
         if not result.done:
@@ -171,6 +157,18 @@ class ConversationWorkflow:
             stage=Stage.SUMMARY,
             done=True,
         )
+
+    def _try_pre_escalation(self, text: str) -> WorkflowReply | None:
+        event = check_message(
+            text,
+            retrieval_confidence=1.0,
+            answered_from_sop=True,
+            state=self.session.escalation,
+            sop=self.sop,
+        )
+        if event is not None and is_immediate_escalation(event.reason):
+            return self._trigger_escalation(event, confidence=1.0)
+        return None
 
     def _trigger_escalation(
         self,
@@ -244,10 +242,6 @@ class ConversationWorkflow:
 
     def save_transcript(self, directory: Path) -> Path:
         return self.session.save_transcript(directory, sop_id=self.sop.sop_id)
-
-
-def _new_id() -> str:
-    return datetime_id()
 
 
 def datetime_id() -> str:

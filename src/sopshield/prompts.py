@@ -26,18 +26,6 @@ Customer question: {question}
 Reply using only the excerpts above. If the answer is not in the excerpts, say so and offer a human handoff."""
 
 
-def faq_fallback_no_sop(sop: SOPDocument) -> str:
-    return sop.conversation.faq_fallback_no_sop
-
-
-def faq_fallback_ungrounded(sop: SOPDocument) -> str:
-    return sop.conversation.faq_fallback_ungrounded
-
-
-def qualification_intro(sop: SOPDocument) -> str:
-    return sop.conversation.qualification_intro
-
-
 def summary_system(sop: SOPDocument) -> str:
     return f"""You write internal handoff notes for {sop.business_name} front desk — not customer-facing copy.
 Use ONLY facts from the transcript and notes. Short, plain sentences. No filler or corporate tone.

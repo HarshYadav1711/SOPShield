@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         sop_path = validate_sop(args.sop)
         provider = build_provider(args.provider)
     except StartupError as exc:
-        print(exc.message(), file=sys.stderr)
+        print(exc, file=sys.stderr)
         return 1
 
     workflow = ConversationWorkflow.from_paths(

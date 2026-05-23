@@ -4,12 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sopshield.prompts import (
-    FAQ_USER_TEMPLATE,
-    faq_fallback_no_sop,
-    faq_fallback_ungrounded,
-    system_prompt,
-)
+from sopshield.prompts import FAQ_USER_TEMPLATE, system_prompt
 from sopshield.providers.base import LLMProvider
 from sopshield.sop.grounding import response_grounded, sop_supports_answer
 from sopshield.sop.loader import SOPDocument
@@ -90,9 +85,9 @@ def _fallback(
     context_used: str = "",
 ) -> FAQResult:
     if reason == "ungrounded":
-        reply = faq_fallback_ungrounded(sop)
+        reply = sop.conversation.faq_fallback_ungrounded
     else:
-        reply = faq_fallback_no_sop(sop)
+        reply = sop.conversation.faq_fallback_no_sop
     return FAQResult(
         reply=reply,
         confidence=confidence,
