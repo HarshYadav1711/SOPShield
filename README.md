@@ -179,6 +179,7 @@ The scope is intentionally narrow: one orchestrator, file-based SOPs, and option
 - **Fixed handoff copy** — Customer-facing escalation text comes from the SOP, not from model improvisation.
 - **Deterministic summary** — Six-section operator summary is template-built by default; escalation status is not re-decided by the model.
 - **Session transcripts** — Full turn log under `transcripts/` for post-incident review.
+- **Escalation audit log** — Append-only JSON lines in `logs/escalations.jsonl` (timestamp, SOP, message, trigger, confidence).
 
 Details: [prompt_design.md](prompt_design.md).
 

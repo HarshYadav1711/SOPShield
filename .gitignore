@@ -10,5 +10,6 @@ venv/
 dist/
 build/
 transcripts/
+logs/
 .idea/
 .vscode/

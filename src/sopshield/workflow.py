@@ -7,6 +7,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from sopshield.audit_log import log_escalation
 from sopshield.escalation import EscalationEvent, check_message, is_immediate_escalation
 from sopshield.providers.base import LLMProvider
 from sopshield.providers.rule_based import RuleBasedProvider
@@ -107,7 +108,7 @@ class ConversationWorkflow:
             sop=self.sop,
         )
         if pre is not None and is_immediate_escalation(pre.reason):
-            return self._trigger_escalation(pre)
+            return self._trigger_escalation(pre, confidence=1.0)
 
         faq = answer_faq(self.sop, text, self.provider)
         self.session.faq_count += 1
@@ -124,7 +125,9 @@ class ConversationWorkflow:
                 snippet = text[:120]
                 self.session.sop_gaps.append(snippet)
                 self.session.unanswered_questions.append(snippet)
-            return self._trigger_escalation(post, partial_reply=faq.reply)
+            return self._trigger_escalation(
+                post, partial_reply=faq.reply, confidence=faq.confidence
+            )
 
         self.session.add(
             "assistant",
@@ -151,7 +154,7 @@ class ConversationWorkflow:
             sop=self.sop,
         )
         if pre is not None and is_immediate_escalation(pre.reason):
-            return self._trigger_escalation(pre)
+            return self._trigger_escalation(pre, confidence=1.0)
 
         result = process_qualification_turn(self.session, text, self.sop)
         if not result.done:
@@ -174,8 +177,16 @@ class ConversationWorkflow:
         event: EscalationEvent,
         *,
         partial_reply: str | None = None,
+        confidence: float = 1.0,
     ) -> WorkflowReply:
         self.session.escalation.record(event)
+        log_escalation(
+            sop_id=self.sop.sop_id,
+            customer_message=event.user_message,
+            trigger=event.reason.value,
+            confidence=confidence,
+            escalated=True,
+        )
         self.session.handoff_note = explain_handoff(
             self.session,
             self.sop,
