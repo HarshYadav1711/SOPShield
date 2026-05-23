@@ -71,9 +71,16 @@ def _infer_intent(session: Session) -> str:
 
 
 def _format_qualification(session: Session) -> str:
+    state = session.qualification_state
+    if state.service_interest or state.client_status or state.contact:
+        lines = [f"  - {state.compact_summary()}"]
+        if state.service_detail:
+            lines.append(f"  - Detail: {state.service_detail}")
+        return "\n".join(lines)
     if not session.qualification:
         return "  - No qualification answers recorded."
     lines = []
     for q in session.qualification:
-        lines.append(f"  - {q.question} -> {q.answer}")
+        label = q.field.replace("_", " ").title() if q.field else q.question[:40]
+        lines.append(f"  - {label}: {q.answer}")
     return "\n".join(lines)

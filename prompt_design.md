@@ -87,12 +87,21 @@ Qualification questions are templated (not generated) so they stay consistent an
 
 ### Stage 2 — Qualification
 
-No LLM generation. Three fixed questions:
-1. Service interest  
-2. New vs returning client  
-3. Contact for follow-up  
+No LLM generation. Stateful intake in `qualification.py`:
 
-Intro: warm transition after the first successful FAQ answer.
+| Field | When asked |
+|-------|----------------|
+| Service interest | Skipped if already mentioned in FAQ (e.g., “Botox hours”) |
+| Service detail | One follow-up only when interest is vague (“something for my face”) |
+| New vs returning | Always — drives booking SOP (consultation for new clients) |
+| Contact | Skipped if phone/email appeared earlier in the thread |
+
+- **2–3 questions** in practice: only gaps are asked, one at a time.
+- **Tone:** Natural acknowledgments (“Got it — Botox.”), no `(1/3)` counters.
+- **Storage:** `Session.qualification_state` (structured dict) plus `qualification[]` audit trail.
+- **Output:** `format_qualification_summary()` — compact line for handoff, appended to transcript file.
+
+Intro: warm transition after the first successful FAQ answer (`QUALIFICATION_INTRO`).
 
 ### Stage 4 — Summary
 

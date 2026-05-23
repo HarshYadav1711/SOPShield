@@ -13,7 +13,7 @@ from sopshield.session import Session, Stage
 from sopshield.sop.loader import SOPDocument, load_sop
 from sopshield.stages.faq import answer_faq
 from sopshield.stages.qualification import (
-    record_qualification_answer,
+    process_qualification_turn,
     start_qualification,
 )
 from sopshield.stages.summary import format_summary_deterministic, generate_summary
@@ -159,18 +159,18 @@ class ConversationWorkflow:
         ):
             return self._trigger_escalation(pre)
 
-        next_q = record_qualification_answer(self.session, text)
-        if next_q:
-            self.session.add("assistant", next_q, Stage.QUALIFICATION)
-            ack = "Thank you. " + next_q
-            return WorkflowReply(message=ack, stage=Stage.QUALIFICATION)
+        result = process_qualification_turn(self.session, text)
+        if not result.done:
+            self.session.add("assistant", result.reply, Stage.QUALIFICATION)
+            return WorkflowReply(message=result.reply, stage=Stage.QUALIFICATION)
 
         self.session.stage = Stage.SUMMARY
-        summary = self._build_summary()
-        self.session.add("assistant", summary, Stage.SUMMARY)
+        session_summary = self._build_summary()
+        combined = f"{result.reply}\n\n---\n\n{session_summary}"
+        self.session.add("assistant", combined, Stage.SUMMARY)
         self.session.stage = Stage.COMPLETE
         return WorkflowReply(
-            message=summary,
+            message=combined,
             stage=Stage.SUMMARY,
             done=True,
         )

@@ -29,8 +29,9 @@ FAQ_FALLBACK_UNGROUNDED = (
 )
 
 QUALIFICATION_INTRO = (
-    "I'd like to ask a few quick questions so our team can assist you better. "
-    "You can skip any question by typing 'skip'."
+    "Before we wrap up, I'd like to ask a couple of quick questions so our "
+    "front-desk team can follow up — only what's helpful for booking. "
+    "You can type 'skip' on any question."
 )
 
 SUMMARY_SYSTEM = """You produce structured session summaries for Bloom Aesthetics Clinic support handoffs.
