@@ -1,12 +1,21 @@
 # SOPShield
 
-SOPShield is a **SOP-first** front-desk assistant for small clinics. It runs a full support conversation in the terminal: answer policy questions from a written Standard Operating Procedures file, collect light lead qualification, detect when a human should take over, and produce a structured handoff summary.
+SOPShield is a **SOP-first** terminal assistant for small clinics: policy answers from a versioned SOP file, light lead qualification, rule-based handoff when required, and a structured operator summary.
 
-Facts come from your SOP—not from model memory. If the document does not cover a topic, the assistant says so and escalates instead of guessing.
+Workflow logic—not model judgment—defines reliability:
 
-**Runtime path:** `main.py` → `sopshield.cli` → `workflow.py` (stages + escalation). All application code lives under `src/sopshield/`; SOP content lives in `data/` as versioned JSON.
+| Concern | Approach |
+|---------|----------|
+| **Strict SOP grounding** | Per-turn retrieval; answers use only matched excerpts (default `rule` provider composes from retrieved lines). |
+| **Confidence-based fallback** | Below the SOP retrieval threshold, FAQ generation is skipped and the session uses the safe handoff path. |
+| **Deterministic escalation** | Triggers in `escalation.py` (regex + thresholds); same input yields the same reason code for tests and review. |
+| **Operational safety** | Load-time SOP validation, escalation before/after FAQ, fixed handoff copy, session transcripts, append-only escalation log. |
 
-**Default runtime:** offline, local execution with `--provider rule` (no API keys, no GPU). Optional adapters add a **local LLM** (Ollama) or a **cloud API** (OpenAI) for phrasing only—workflow stages, escalation rules, and qualification stay the same.
+Facts do not come from model memory. If excerpts do not cover a topic, the assistant states that and escalates instead of guessing. Optional `ollama` / `openai` adapters may rephrase FAQ or summary text only; stages, thresholds, and escalation stay unchanged.
+
+**Runtime path:** `main.py` → `sopshield.cli` → `workflow.py` (stages + escalation). Application code under `src/sopshield/`; SOP content in `data/` as versioned JSON.
+
+**Default runtime:** offline with `--provider rule` (no API keys, no GPU). Optional **local LLM** (Ollama) or **cloud API** (OpenAI) backends affect phrasing at generative call sites only.
 
 **Sample businesses** (one file per business; see [data/README.md](data/README.md))
 
@@ -15,13 +24,26 @@ Facts come from your SOP—not from model memory. If the document does not cover
 | `bloom_aesthetics_demo` | Boutique medical aesthetics (default) |
 | `northstar_dental` | Dental practice with extended escalation patterns |
 
+## Operational safety
+
+- **Load-time validation** — `sop/validation.py` rejects SOPs missing `business_name`, services, escalation rules, or booking policy before a session starts.
+- **Retrieval gate** — FAQ runs only when section match confidence meets the SOP threshold (default `0.35`).
+- **Excerpt isolation** — Models see retrieved sections for the current turn, not the full document.
+- **Escalation precedence** — Complaints, clinical safety, and explicit human requests are checked before generation; low confidence and SOP gaps trigger handoff after an attempted answer.
+- **Fixed handoff copy** — Customer-facing escalation text comes from the SOP, not from model improvisation.
+- **Deterministic summary** — Six-section operator summary is template-built by default; escalation status is not re-decided by the model.
+- **Session transcripts** — Full turn log under `transcripts/` for post-incident review.
+- **Escalation audit log** — Append-only JSON lines in `logs/escalations.jsonl` (timestamp, SOP, message, trigger, confidence).
+
+Prompt and threshold detail: [prompt_design.md](prompt_design.md).
+
 ---
 
 ## What it does
 
-- **Grounded FAQ** — Retrieves relevant SOP sections and answers only from those excerpts.
+- **Grounded FAQ** — Retrieves relevant SOP sections; answers only from those excerpts, with confidence-gated fallback when matches are weak.
 - **Lead qualification** — Asks a small set of templated questions (service interest, new vs returning, contact), skipping fields already inferred from the chat.
-- **Escalation** — Rule-based detection for low retrieval confidence, SOP gaps, complaints, angry tone, pricing pressure, clinical safety, out-of-scope topics, and explicit requests for a person.
+- **Escalation** — Deterministic triggers for low retrieval confidence, SOP gaps, complaints, angry tone, pricing pressure, clinical safety, out-of-scope topics, and explicit requests for a person.
 - **Session summary** — Six-section operator summary: intent, collected details, unanswered questions, SOP gaps, escalation reason, recommended next action.
 - **Transcripts** — Every session is saved under `transcripts/` for review.
 
@@ -29,10 +51,8 @@ See [prompt_design.md](prompt_design.md) for prompts, safety layers, and escalat
 
 ### Design rationale
 
-- **Lightweight workflow** — Four fixed stages (FAQ → qualification → summary, with escalation evaluated throughout) keep transcripts easy to audit. There is no agent graph or tool loop; each turn has one job.
-- **Deterministic escalation** — Handoff decisions are regex and threshold rules in `escalation.py`, not model judgment. The same input yields the same reason code, which matters for compliance review and regression tests.
-- **Strict SOP grounding** — Retrieval gates, excerpt-only prompts, and post-checks limit invented policy. The default `RuleBasedProvider` composes answers from retrieved lines only.
-- **Multi-SOP support** — Each business is a JSON file (`document.id` + sections). The loader validates required fields and resolves `--sop <id>` without code changes, so one codebase serves multiple clinic profiles.
+- **Lightweight workflow** — Four fixed stages (FAQ → qualification → summary, with escalation evaluated throughout) keep transcripts easy to audit. No agent graph or tool loop; each turn has one job.
+- **Multi-SOP support** — Each business is a JSON file (`document.id` + sections). The loader validates required fields and resolves `--sop <id>` without code changes.
 
 ---
 
@@ -211,21 +231,6 @@ pytest
 | CLI channel | Thin surface for integration testing | No web widget or CRM connector in-tree |
 
 The scope is intentionally narrow: one orchestrator, file-based SOPs, and optional LLM only where phrasing helps (FAQ/summary). A database, dashboard, or multi-agent layer would sit outside this package.
-
----
-
-## Operational safety
-
-- **Load-time validation** — `sop/validation.py` rejects SOPs missing `business_name`, services, escalation rules, or booking policy before a session starts.
-- **Retrieval gate** — FAQ runs only when section match confidence meets the SOP threshold (default `0.35`).
-- **Excerpt isolation** — Models see retrieved sections for the current turn, not the full document.
-- **Escalation precedence** — Complaints, clinical safety, and explicit human requests are checked before generation; low confidence and SOP gaps trigger handoff after an attempted answer.
-- **Fixed handoff copy** — Customer-facing escalation text comes from the SOP, not from model improvisation.
-- **Deterministic summary** — Six-section operator summary is template-built by default; escalation status is not re-decided by the model.
-- **Session transcripts** — Full turn log under `transcripts/` for post-incident review.
-- **Escalation audit log** — Append-only JSON lines in `logs/escalations.jsonl` (timestamp, SOP, message, trigger, confidence).
-
-Details: [prompt_design.md](prompt_design.md).
 
 ---
 
