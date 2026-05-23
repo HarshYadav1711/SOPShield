@@ -48,7 +48,11 @@ def main(argv: list[str] | None = None) -> int:
         "--provider",
         choices=list(SUPPORTED_PROVIDERS),
         default="rule",
-        help="LLM backend (default: rule = no API, offline)",
+        help=(
+            "Generative backend for FAQ and optional --llm-summary / "
+            "--llm-handoff-note (default: rule = offline, no API; "
+            "optional: ollama = local LLM, openai = cloud API)"
+        ),
     )
     parser.add_argument(
         "--transcripts-dir",

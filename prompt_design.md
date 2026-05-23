@@ -183,15 +183,21 @@ Mixing FAQ and intake in one free-form chat makes transcripts hard to review and
 
 ## Provider abstraction
 
-All generative calls use `LLMProvider.complete(system, user)`:
+Generative steps (FAQ reply, optional summary/handoff note) call `LLMProvider.complete(system, user)`. Everything else—retrieval, grounding checks, escalation, qualification—is local and provider-agnostic.
 
-| Provider | Role |
-|----------|------|
-| `rule` (default) | Offline, deterministic; ideal for CI and demos |
-| `ollama` | Local models via Ollama |
-| `openai` | Optional cloud model (`pip install -e ".[openai]"`) |
+**Default runtime (`rule`):** offline, stdlib-only, deterministic answers from retrieved SOP lines. This is the intended development and review path: no API keys, reproducible transcripts, and the same escalation behavior as production-like configs.
 
-Swapping providers does not change retrieval thresholds, escalation rules, or qualification templates.
+**Optional backends** swap wording only:
+
+| Provider | Runtime | Role |
+|----------|---------|------|
+| `rule` (default) | Offline / local | Deterministic FAQ from excerpts; CI and demos |
+| `ollama` | Local machine | Natural phrasing via Ollama; data stays on-device |
+| `openai` | Cloud API | Hosted model (`pip install -e ".[openai]"` + API key) |
+
+**Why abstract providers?** Teams can demo and test the full workflow without a model service, then enable Ollama or OpenAI when available—without changing stage boundaries, thresholds, or handoff rules.
+
+Swapping `--provider` does not change retrieval thresholds, escalation rules, or qualification templates.
 
 ---
 

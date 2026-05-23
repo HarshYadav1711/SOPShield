@@ -1,4 +1,8 @@
-"""Abstract LLM provider — swap local, rule-based, or optional cloud backends."""
+"""LLM provider interface — offline rule engine (default) or optional local/cloud adapters.
+
+Workflow stages call complete() only where generative wording is needed (FAQ, optional
+summary/handoff). Escalation and qualification do not use providers.
+"""
 
 from __future__ import annotations
 

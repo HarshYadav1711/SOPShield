@@ -6,6 +6,8 @@ Facts come from your SOP—not from model memory. If the document does not cover
 
 **Runtime path:** `main.py` → `sopshield.cli` → `workflow.py` (stages + escalation). All application code lives under `src/sopshield/`; SOP content lives in `data/` as versioned JSON.
 
+**Default runtime:** offline, local execution with `--provider rule` (no API keys, no GPU). Optional adapters add a **local LLM** (Ollama) or a **cloud API** (OpenAI) for phrasing only—workflow stages, escalation rules, and qualification stay the same.
+
 **Sample businesses** (one file per business; see [data/README.md](data/README.md))
 
 | SOP id | Use case |
@@ -31,6 +33,40 @@ See [prompt_design.md](prompt_design.md) for prompts, safety layers, and escalat
 - **Deterministic escalation** — Handoff decisions are regex and threshold rules in `escalation.py`, not model judgment. The same input yields the same reason code, which matters for compliance review and regression tests.
 - **Strict SOP grounding** — Retrieval gates, excerpt-only prompts, and post-checks limit invented policy. The default `RuleBasedProvider` composes answers from retrieved lines only.
 - **Multi-SOP support** — Each business is a JSON file (`document.id` + sections). The loader validates required fields and resolves `--sop <id>` without code changes, so one codebase serves multiple clinic profiles.
+
+---
+
+## Runtime and providers
+
+SOPShield separates **workflow logic** (always local) from **optional generative backends** (swappable via `--provider`).
+
+### Default: offline / local (`rule`)
+
+After `pip install -e .`, run `python main.py` with no extra services. The default `RuleBasedProvider` composes FAQ answers from retrieved SOP text using stdlib only. Summaries and escalation are template- and rule-driven unless you opt in to LLM wording flags.
+
+This is the intended **development, demo, test, and review** path:
+
+| Benefit | What it means in practice |
+|---------|---------------------------|
+| **Accessibility** | No paid API account, no GPU, no Docker stack—just Python 3.11+. |
+| **Portability** | Same behavior on a laptop, in CI, or on an air-gapped review machine. |
+| **Auditability** | Retrieval scores, escalation reason codes, and transcripts stay reproducible. |
+
+### Optional: local LLM (`ollama`) or cloud API (`openai`)
+
+Install an extra only when you want different phrasing for FAQ (or optional `--llm-summary` / `--llm-handoff-note`):
+
+| `--provider` | Runtime | Install | Typical use |
+|--------------|---------|---------|-------------|
+| `rule` | Offline (default) | `pip install -e .` | Dev, CI, compliance demos |
+| `ollama` | Local machine | `pip install -e ".[ollama]"` + [Ollama](https://ollama.com) running | Natural wording without sending data to a cloud API |
+| `openai` | Cloud API | `pip install -e ".[openai]"` + `OPENAI_API_KEY` | Hosted model when a team already uses OpenAI |
+
+Escalation triggers, retrieval thresholds, and qualification templates **do not change** when you switch providers—only generative call sites (FAQ reply, optional summary/handoff note) use the selected backend.
+
+### Why a provider abstraction?
+
+All generative calls go through one interface: `LLMProvider.complete(system, user)` in `providers/base.py`. That keeps the orchestrator small: you can run the full four-stage workflow and regression tests without any model service, then plug in Ollama or OpenAI later for wording experiments without redesigning stages or escalation.
 
 ---
 
@@ -60,17 +96,21 @@ Escalation rules run **before** FAQ generation (e.g. “speak to a manager”) a
 
 **Requirements:** Python 3.11+
 
+**Setup (default offline runtime):**
+
 ```bash
 cd SOPShield
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # macOS / Linux
 
-pip install -e ".[dev]"
-python main.py
+pip install -e .                # core package — rule provider, no API deps
+python main.py                  # same as: python main.py --provider rule
 ```
 
-Interactive mode: type questions, then `quit` to end. Transcripts are written to `transcripts/`.
+For tests: `pip install -e ".[dev]"` then `pytest`.
+
+Interactive mode: type questions, then `quit` to end. Transcripts are written to `transcripts/`. No API keys or model server is required for the default path.
 
 **Choose a business SOP**
 
@@ -90,30 +130,31 @@ After install, the same entry point is available as `sopshield`.
 
 ---
 
-## Dependencies
+## Dependencies and configuration
 
-| Component | Default install | Optional |
-|-----------|-----------------|----------|
-| Runtime | Python 3.11+, stdlib only | — |
-| Package | `pip install -e .` | — |
-| Tests | — | `pip install -e ".[dev]"` → pytest |
-| Local LLM | — | `pip install -e ".[ollama]"` + [Ollama](https://ollama.com) running |
-| OpenAI | — | `pip install -e ".[openai]"` + `OPENAI_API_KEY` |
+`pyproject.toml` keeps **core `dependencies = []`** so the default install is offline-capable. Optional extras add dev tools or provider adapters only when you need them.
 
-Core dependencies are intentionally empty in `pyproject.toml` so the default path runs offline with `RuleBasedProvider`.
+| Install command | What you get |
+|-----------------|--------------|
+| `pip install -e .` | Full workflow, `rule` provider (default), stdlib only |
+| `pip install -e ".[dev]"` | Above + pytest |
+| `pip install -e ".[ollama]"` | Above + Ollama adapter (install and run Ollama separately) |
+| `pip install -e ".[openai]"` | Above + OpenAI client library |
 
-**Providers**
-
-| Flag | Backend |
-|------|---------|
-| `--provider rule` | Deterministic answers from retrieved SOP text (default) |
-| `--provider ollama` | Local model via Ollama |
-| `--provider openai` | OpenAI API |
+**CLI provider selection** (validated at startup in `startup.py`):
 
 ```bash
-sopshield --provider ollama
-sopshield --provider openai --llm-summary
+# Default — offline, recommended for dev and CI
+python main.py
+
+# Optional local LLM (data stays on your machine)
+python main.py --provider ollama
+
+# Optional cloud API
+python main.py --provider openai --llm-summary
 ```
+
+Optional flags `--llm-summary` and `--llm-handoff-note` use the selected provider for wording only; escalation decisions remain rule-based.
 
 ---
 
@@ -138,7 +179,9 @@ src/sopshield/
     retrieval.py             # Lexical section retrieval
     grounding.py             # Answer support and numeric post-check
   stages/                    # faq, qualification, summary
-  providers/                 # rule (default), ollama, openai
+  providers/                 # LLMProvider adapters: rule (default), ollama, openai
+  startup.py                 # SOP + provider validation before session start
+  audit_log.py               # append-only escalation JSONL
 prompt_design.md             # Prompt and safety design notes
 test_transcripts/            # Reference conversations
 tests/                       # Pytest
@@ -162,7 +205,8 @@ pytest
 | Staged workflow vs. single agent | Predictable transcripts; clear operator handoff sections | Less flexible than free-form chat |
 | Lexical retrieval | No embedding service; scores are explainable in logs | Unusual phrasing may score low → safe escalation |
 | Rule-based escalation | Same triggers in tests and production; provider-agnostic | Regex is not a full sentiment model |
-| Rule-based default provider | Runs offline; no API keys for CI | Wording is less natural than an LLM |
+| Offline `rule` default | Accessible dev/CI path; no API keys | FAQ wording is less natural than an LLM |
+| Provider abstraction | Same workflow with local or cloud backends | Extra install steps for non-default providers |
 | JSON SOP per business | Policy changes without redeploying code | No admin UI for editing SOPs |
 | CLI channel | Thin surface for integration testing | No web widget or CRM connector in-tree |
 

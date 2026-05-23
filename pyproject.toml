@@ -8,11 +8,14 @@ version = "1.0.0"
 description = "SOP-first customer support workflow for SMB clinics"
 readme = "README.md"
 requires-python = ">=3.11"
+# Core install is offline-capable (RuleBasedProvider; stdlib only).
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov>=5.0"]
+# Local LLM adapter — requires Ollama running separately (see README).
 ollama = []
+# Cloud API adapter — optional; not needed for default dev/CI path.
 openai = ["openai>=1.40"]
 
 [project.scripts]
