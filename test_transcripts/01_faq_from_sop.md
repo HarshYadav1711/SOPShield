@@ -8,7 +8,7 @@
 
 **Assistant:** Hello, and thank you for contacting Bloom Aesthetics Clinic. I'm here to help with hours, services, booking, and policies. What can I help you with today?
 
-**Customer:** What are your hours on Saturday?
+**Customer:** Hi — are you open on Saturdays? What time do you close?
 
 **Assistant:** Thanks for asking. Saturday: 10:00 AM - 4:00 PM If you'd like to book or need anything else, I'm happy to help.
 

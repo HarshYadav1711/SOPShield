@@ -4,7 +4,7 @@
 **Command:**
 
 ```bash
-python main.py --sop bloom_aesthetics_demo -m "Can you set me up with a financing plan for laser packages?"
+python main.py --sop bloom_aesthetics_demo -m "any chance you do a financing plan for laser packages?"
 ```
 
 **Trigger:** `financing plan` matches configured out-of-scope patterns; SOP says payment plans are not offered
@@ -13,7 +13,7 @@ python main.py --sop bloom_aesthetics_demo -m "Can you set me up with a financin
 
 **Assistant:** Hello, and thank you for contacting Bloom Aesthetics Clinic. I'm here to help with hours, services, booking, and policies. What can I help you with today?
 
-**Customer:** Can you set me up with a financing plan for laser packages?
+**Customer:** any chance you do a financing plan for laser packages?
 
 **Assistant:** I'm connecting you with our front-desk team now. They'll follow up shortly at the number on your account. Support email: support@bloom-aesthetics.example (business hours).
 
@@ -22,7 +22,7 @@ python main.py --sop bloom_aesthetics_demo -m "Can you set me up with a financin
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-General inquiry: Can you set me up with a financing plan for laser packages?
+General inquiry: any chance you do a financing plan for laser packages?
 
 ### 2. Collected details
 - Mentioned service (not fully qualified): Laser hair removal

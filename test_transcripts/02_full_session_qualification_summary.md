@@ -4,14 +4,14 @@
 **Command:**
 
 ```bash
-python main.py --sop bloom_aesthetics_demo -m "What are your hours on Saturday?" -m "Botox" -m "new client" -m "555-0142"
+python main.py --sop bloom_aesthetics_demo -m "are you open Saturday?" -m "interested in Botox" -m "first visit" -m "555-0142 works"
 ```
 
 ---
 
 **Assistant:** Hello, and thank you for contacting Bloom Aesthetics Clinic. I'm here to help with hours, services, booking, and policies. What can I help you with today?
 
-**Customer:** What are your hours on Saturday?
+**Customer:** are you open Saturday?
 
 **Assistant:** Thanks for asking. Saturday: 10:00 AM - 4:00 PM If you'd like to book or need anything else, I'm happy to help.
 
@@ -19,20 +19,25 @@ Before we wrap up, I'd like to ask a couple of quick questions so our front-desk
 
 Which treatment were you hoping to learn about or book? (For example, Botox, fillers, laser hair removal, or a chemical peel.)
 
-**Customer:** Botox
+**Customer:** interested in Botox
 
 **Assistant:** Got it — Botox. Have you visited Bloom Aesthetics before, or would this be your first time with us?
 
-**Customer:** new client
+**Customer:** first visit
 
 **Assistant:** Thanks — I've noted you're a new client. What's the best phone number or email for our front-desk team to follow up?
 
-**Customer:** 555-0142
+**Customer:** 555-0142 works
 
 **Assistant:** Perfect — we'll use 555-0142 to reach you. Thank you — I have what our team needs for follow-up. Here's a quick summary of your visit:
 
 **Lead qualification**  
 Service: Botox · Client: new · Contact: 555-0142
+
+_Captured during intake:_
+- Service interest: Botox
+- Client status: new
+- Contact: 555-0142
 
 ---
 

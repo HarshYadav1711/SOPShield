@@ -9,12 +9,12 @@ This documents two related behaviors.
 **Command:**
 
 ```bash
-python main.py --sop bloom_aesthetics_demo -m "Do you sell pet grooming kits?" -m "What colors of pet grooming kits do you have?"
+python main.py --sop bloom_aesthetics_demo -m "random question — do you sell pet grooming kits?"
 ```
 
-The session ends after the **first** off-topic question. The second `-m` is not processed because the workflow is already complete.
+The session ends after the **first** off-topic question. A second `-m` is not processed because the workflow is already complete.
 
-**Customer:** Do you sell pet grooming kits?
+**Customer:** random question — do you sell pet grooming kits?
 
 **Assistant:** I don't have that information in our clinic guidelines. A member of our front-desk team will follow up with you shortly.
 
@@ -39,9 +39,9 @@ check_message("what about international shipping", confidence=0.5, answered_from
 
 **Customer:** Do you ship your skincare line to Canada?
 
-**Assistant:** I don't have that information in our clinic guidelines… *(first miss — would be `sop_gap` at confidence 0.5)*
+**Assistant:** I don't have that information in our clinic guidelines… *(first miss — `sop_gap` at confidence 0.5)*
 
-**Customer:** Okay — what about express shipping to Toronto?
+**Customer:** Ok — what about express shipping to Toronto?
 
 **Assistant:** … *(second miss — `repeated_unanswered` when streak logic applies)*
 
