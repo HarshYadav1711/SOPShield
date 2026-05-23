@@ -2,10 +2,9 @@
 
 from pathlib import Path
 
-import pytest
-
 from sopshield.providers.rule_based import RuleBasedProvider
-from sopshield.session import Stage
+from sopshield.session import Session, Stage
+from sopshield.sop.loader import load_sop
 from sopshield.stages.qualification import (
     detect_contact,
     detect_service,
@@ -16,39 +15,37 @@ from sopshield.stages.qualification import (
 )
 from sopshield.workflow import ConversationWorkflow
 
-SOP = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_sop.json"
+SOP_PATH = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_demo.json"
+SOP = load_sop(SOP_PATH)
 
 
 def test_detect_service_and_contact():
-    assert detect_service("I'm interested in Botox for my forehead") == "Botox"
+    assert detect_service("I'm interested in Botox for my forehead", SOP) == "Botox"
     assert detect_contact("Reach me at jane@example.com") == "jane@example.com"
     assert detect_contact("Call 555-0142") == "555-0142"
 
 
 def test_prefill_skips_redundant_service_question():
-    from sopshield.session import Session
-
     session = Session(session_id="test-prefill")
     session.add("user", "I'm interested in Botox — what are your Saturday hours?", Stage.FAQ)
-    prefill_from_conversation(session)
+    prefill_from_conversation(session, SOP)
     assert session.qualification_state.service_interest == "Botox"
-    prompt = start_qualification(session)
+    prompt = start_qualification(session, SOP)
     assert "Which treatment" not in prompt
     assert "visited Bloom Aesthetics before" in prompt
 
 
 def test_vague_service_triggers_follow_up():
-    from sopshield.session import Session
-
     session = Session(session_id="test-vague")
     session.qualification_state.service_interest = "something for my face"
-    result = process_qualification_turn(session, "forehead lines and crow's feet")
+    session.qualification_state.pending_field = "service_detail"
+    result = process_qualification_turn(session, "forehead lines and crow's feet", SOP)
     assert session.qualification_state.service_detail is not None
     assert result.done is False or session.qualification_state.client_status
 
 
 def test_full_qualification_flow_stores_structured_state():
-    wf = ConversationWorkflow.from_paths(SOP, RuleBasedProvider())
+    wf = ConversationWorkflow.from_paths(SOP_PATH, RuleBasedProvider())
     wf.start()
     wf.handle("What are your hours on Saturday?")
     wf.handle("Botox")
@@ -67,7 +64,7 @@ def test_full_qualification_flow_stores_structured_state():
 
 
 def test_qualification_summary_compact():
-    wf = ConversationWorkflow.from_paths(SOP, RuleBasedProvider())
+    wf = ConversationWorkflow.from_paths(SOP_PATH, RuleBasedProvider())
     wf.start()
     wf.handle("What are your hours on Saturday?")
     wf.handle("Botox")
@@ -81,13 +78,11 @@ def test_qualification_summary_compact():
 
 
 def test_skip_answer_recorded():
-    from sopshield.session import Session
-
     session = Session(session_id="test-skip")
     state = session.qualification_state
     state.service_interest = "Botox"
     state.client_status = "new"
     state.pending_field = "contact"
-    result = process_qualification_turn(session, "skip")
+    result = process_qualification_turn(session, "skip", SOP)
     assert state.contact == "not provided"
     assert result.done

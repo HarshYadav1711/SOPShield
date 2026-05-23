@@ -4,10 +4,18 @@ from __future__ import annotations
 
 import re
 
-from sopshield.prompts import FAQ_FALLBACK_NO_SOP, FAQ_FALLBACK_UNGROUNDED
 from sopshield.providers.base import LLMProvider, ProviderResponse
 from sopshield.sop.grounding import sop_supports_answer
 from sopshield.sop.loader import SOPSection
+
+_FALLBACK_NO_SOP = (
+    "I don't have that information in our guidelines. "
+    "A member of our team will follow up with you shortly."
+)
+_FALLBACK_UNGROUNDED = (
+    "I want to make sure you get accurate information. "
+    "Our team will follow up with you on that."
+)
 
 # Extract answer instruction from our structured user prompt
 _CONTEXT_RE = re.compile(
@@ -27,16 +35,16 @@ class RuleBasedProvider(LLMProvider):
         question = q_match.group("q").strip() if q_match else user.strip()
 
         if not context or context.startswith("(No matching"):
-            return ProviderResponse(text=FAQ_FALLBACK_NO_SOP, confidence=0.0)
+            return ProviderResponse(text=_FALLBACK_NO_SOP, confidence=0.0)
 
         sections = _sections_from_context(context)
         if not sop_supports_answer(question, sections):
-            return ProviderResponse(text=FAQ_FALLBACK_NO_SOP, confidence=0.0)
+            return ProviderResponse(text=_FALLBACK_NO_SOP, confidence=0.0)
 
         first_block = context.split("\n\n---\n\n")[0] if context else context
         answer_bits = _extract_facts(first_block, question=question)
         if not answer_bits:
-            return ProviderResponse(text=FAQ_FALLBACK_UNGROUNDED, confidence=0.2)
+            return ProviderResponse(text=_FALLBACK_UNGROUNDED, confidence=0.2)
 
         body = answer_bits[0]
         reply = (
@@ -55,7 +63,8 @@ def _sections_from_context(context: str) -> list[SOPSection]:
         lines = block.split("\n", 1)
         title = lines[0].lstrip("#").strip()
         body = lines[1].strip() if len(lines) > 1 else ""
-        sections.append(SOPSection(title=title, body=body))
+        section_id = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_") or "section"
+        sections.append(SOPSection(id=section_id, title=title, body=body))
     return sections
 
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from sopshield.sop.loader import load_sop
 from sopshield.sop.retrieval import retrieve
 
-SOP = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_sop.json"
+SOP = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_demo.json"
 
 
 def test_retrieve_hours():

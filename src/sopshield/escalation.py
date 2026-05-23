@@ -7,6 +7,8 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 
+from sopshield.sop.loader import SOPDocument
+
 logger = logging.getLogger(__name__)
 
 CONFIDENCE_THRESHOLD = 0.35
@@ -25,7 +27,6 @@ class EscalationReason(str, Enum):
     SENSITIVE_UNSUPPORTED = "sensitive_unsupported"
 
 
-# High-confidence lexical signals — conservative patterns (word boundaries, no fuzzy ML)
 _EXPLICIT = re.compile(
     r"\b(speak to (a )?(human|person|manager|supervisor|agent)|"
     r"talk to (a )?(human|person|manager|supervisor)|"
@@ -72,7 +73,6 @@ _OUT_OF_SCOPE = re.compile(
     re.I,
 )
 
-# Immediate handoff — checked before FAQ / qualification
 _IMMEDIATE_REASONS = frozenset(
     {
         EscalationReason.EXPLICIT_REQUEST,
@@ -83,6 +83,18 @@ _IMMEDIATE_REASONS = frozenset(
         EscalationReason.SENSITIVE_UNSUPPORTED,
     }
 )
+
+_DEFAULT_HANDOFF_NOTES = {
+    EscalationReason.EXPLICIT_REQUEST: "Customer requested a live agent.",
+    EscalationReason.ANGRY_SENTIMENT: "De-escalate; customer upset — prioritize callback.",
+    EscalationReason.COMPLAINT: "Review complaint and billing/service notes before contact.",
+    EscalationReason.PRICING_NEGOTIATION: "Pricing outside bot scope — manager or front desk to quote.",
+    EscalationReason.SENSITIVE_UNSUPPORTED: "Clinical/safety question — route to licensed staff, not chatbot.",
+    EscalationReason.OUT_OF_SCOPE: "Out-of-scope topic — clarify what the practice can offer.",
+    EscalationReason.LOW_CONFIDENCE: "Low SOP match — verify answer manually before replying.",
+    EscalationReason.SOP_GAP: "SOP missing topic — capture answer for future FAQ update.",
+    EscalationReason.REPEATED_UNANSWERED: "Multiple unanswered questions — complete intake by phone.",
+}
 
 
 @dataclass
@@ -119,24 +131,69 @@ def check_message(
     retrieval_confidence: float,
     answered_from_sop: bool,
     state: EscalationState,
+    sop: SOPDocument | None = None,
 ) -> EscalationEvent | None:
     """Return an escalation event when deterministic rules fire; else None."""
     text = message.strip()
     if not text:
         return None
 
-    event = _check_lexical_signals(text)
+    event = _check_lexical_signals(text, sop)
     if event is not None:
         return event
 
     if not answered_from_sop:
-        return _check_unanswered(text, retrieval_confidence, state)
+        return _check_unanswered(text, retrieval_confidence, state, sop)
 
     state.unanswered_streak = 0
     return None
 
 
-def _check_lexical_signals(message: str) -> EscalationEvent | None:
+def handoff_note_deterministic(
+    event: EscalationEvent,
+    sop: SOPDocument | None = None,
+) -> str:
+    """Operator-facing one-liner — no model required."""
+    if sop and event.reason.value in sop.escalation.handoff_notes:
+        label = sop.escalation.handoff_notes[event.reason.value]
+    else:
+        label = _DEFAULT_HANDOFF_NOTES.get(event.reason, event.detail)
+    return f"{label} ({event.reason.value})"
+
+
+def _matches_sensitive(message: str, sop: SOPDocument | None) -> bool:
+    if sop and sop.escalation.sensitive_patterns:
+        for term in sop.escalation.sensitive_patterns:
+            if re.search(re.escape(term), message, re.I):
+                return True
+    return bool(_SENSITIVE.search(message))
+
+
+def _matches_out_of_scope(message: str, sop: SOPDocument | None) -> bool:
+    if sop and sop.escalation.out_of_scope_patterns:
+        for term in sop.escalation.out_of_scope_patterns:
+            if re.search(re.escape(term), message, re.I):
+                return True
+        return False
+    return bool(_OUT_OF_SCOPE.search(message))
+
+
+def _confidence_threshold(sop: SOPDocument | None) -> float:
+    if sop:
+        return sop.escalation.confidence_threshold
+    return CONFIDENCE_THRESHOLD
+
+
+def _unanswered_limit(sop: SOPDocument | None) -> int:
+    if sop:
+        return sop.escalation.unanswered_limit
+    return UNANSWERED_ESCALATION_LIMIT
+
+
+def _check_lexical_signals(
+    message: str,
+    sop: SOPDocument | None,
+) -> EscalationEvent | None:
     """Conservative, priority-ordered pattern checks (no escalation on weak matches)."""
     if _EXPLICIT.search(message):
         return EscalationEvent(
@@ -163,13 +220,13 @@ def _check_lexical_signals(message: str) -> EscalationEvent | None:
             "Pricing negotiation or discount pressure beyond published SOP rates.",
             message,
         )
-    if _SENSITIVE.search(message):
+    if _matches_sensitive(message, sop):
         return EscalationEvent(
             EscalationReason.SENSITIVE_UNSUPPORTED,
             "Medical or clinical safety question — not answerable from front-desk SOP.",
             message,
         )
-    if _OUT_OF_SCOPE.search(message):
+    if _matches_out_of_scope(message, sop):
         return EscalationEvent(
             EscalationReason.OUT_OF_SCOPE,
             "Topic appears outside clinic SOP scope.",
@@ -182,26 +239,29 @@ def _check_unanswered(
     message: str,
     retrieval_confidence: float,
     state: EscalationState,
+    sop: SOPDocument | None,
 ) -> EscalationEvent | None:
     state.unanswered_streak += 1
+    limit = _unanswered_limit(sop)
+    threshold = _confidence_threshold(sop)
 
-    if state.unanswered_streak >= UNANSWERED_ESCALATION_LIMIT:
+    if state.unanswered_streak >= limit:
         return EscalationEvent(
             EscalationReason.REPEATED_UNANSWERED,
             (
                 f"Question could not be answered from SOP "
                 f"{state.unanswered_streak} time(s) in a row "
-                f"(limit: {UNANSWERED_ESCALATION_LIMIT})."
+                f"(limit: {limit})."
             ),
             message,
         )
 
-    if retrieval_confidence < CONFIDENCE_THRESHOLD:
+    if retrieval_confidence < threshold:
         return EscalationEvent(
             EscalationReason.LOW_CONFIDENCE,
             (
                 f"Retrieval confidence {retrieval_confidence:.2f} "
-                f"below threshold {CONFIDENCE_THRESHOLD}."
+                f"below threshold {threshold}."
             ),
             message,
         )
@@ -211,20 +271,3 @@ def _check_unanswered(
         "No supporting SOP content for this question.",
         message,
     )
-
-
-def handoff_note_deterministic(event: EscalationEvent) -> str:
-    """Operator-facing one-liner — no model required."""
-    labels = {
-        EscalationReason.EXPLICIT_REQUEST: "Customer requested a live agent.",
-        EscalationReason.ANGRY_SENTIMENT: "De-escalate; customer upset — prioritize callback.",
-        EscalationReason.COMPLAINT: "Review complaint and billing/service notes before contact.",
-        EscalationReason.PRICING_NEGOTIATION: "Pricing outside bot scope — manager or front desk to quote.",
-        EscalationReason.SENSITIVE_UNSUPPORTED: "Clinical/safety question — route to licensed staff, not chatbot.",
-        EscalationReason.OUT_OF_SCOPE: "Out-of-scope topic — clarify what Bloom Aesthetics can offer.",
-        EscalationReason.LOW_CONFIDENCE: "Low SOP match — verify answer manually before replying.",
-        EscalationReason.SOP_GAP: "SOP missing topic — capture answer for future FAQ update.",
-        EscalationReason.REPEATED_UNANSWERED: "Multiple unanswered questions — complete intake by phone.",
-    }
-    label = labels.get(event.reason, event.detail)
-    return f"{label} ({event.reason.value})"

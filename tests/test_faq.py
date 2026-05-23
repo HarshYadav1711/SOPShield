@@ -9,7 +9,7 @@ from sopshield.sop.grounding import sop_supports_answer
 from sopshield.stages.faq import answer_faq
 from sopshield.workflow import ConversationWorkflow
 
-SOP_JSON = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_sop.json"
+SOP_JSON = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_demo.json"
 SOP_MD = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_sop.md"
 
 

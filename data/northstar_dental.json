@@ -1,0 +1,125 @@
+{
+  "document": {
+    "id": "northstar_dental",
+    "title": "Northstar Dental — Standard Operating Procedures",
+    "business_name": "Northstar Dental",
+    "version": "1.0",
+    "scope": "Front-desk, scheduling, and patient intake for general and family dentistry."
+  },
+  "contact": {
+    "phone": "555-0199",
+    "email": "care@northstar-dental.example",
+    "portal": "northstar-dental.example/appointments"
+  },
+  "conversation": {
+    "greeting": "Hello, thank you for contacting Northstar Dental. I can help with office hours, services, insurance and billing policies, and scheduling. How may I assist you today?",
+    "handoff_message": "I'm connecting you with our care coordination team now. They'll follow up shortly at the number on your account. For urgent dental concerns after hours, call 555-0199 and press 1. Support email: care@northstar-dental.example (monitored business hours).",
+    "tone": "calm, professional, and reassuring — appropriate for a family dental practice"
+  },
+  "qualification": {
+    "services": [
+      {"pattern": "\\b(cleaning|prophylaxis|hygiene)\\b", "label": "Dental cleaning"},
+      {"pattern": "\\b(exam|checkup|check-up)\\b", "label": "Dental exam"},
+      {"pattern": "\\b(filling|cavity)\\b", "label": "Fillings"},
+      {"pattern": "\\b(crown|cap)\\b", "label": "Crowns"},
+      {"pattern": "\\b(root\\s+canal|endodontic)\\b", "label": "Root canal"},
+      {"pattern": "\\b(extraction|tooth\\s+pulled)\\b", "label": "Tooth extraction"},
+      {"pattern": "\\b(implant)\\b", "label": "Dental implants"},
+      {"pattern": "\\b(whitening|bleach)\\b", "label": "Teeth whitening"},
+      {"pattern": "\\b(invisalign|braces|orthodont)\\b", "label": "Orthodontics"},
+      {"pattern": "\\b(emergency|urgent|toothache|pain)\\b", "label": "Emergency visit"}
+    ],
+    "vague_hints": "\\b(something|tooth|teeth|mouth|dental|hurt|pain|checkup)\\b",
+    "questions": {
+      "service_interest": "Which dental service are you interested in? (For example, cleaning, filling, crown, emergency visit, or orthodontics.)",
+      "service_detail": "Could you share a bit more — for example, which tooth or how long you've had symptoms — so our team can prepare?",
+      "client_status": "Have you been a patient at Northstar Dental before, or would this be your first visit?",
+      "contact": "What's the best phone number or email for our scheduling team to follow up?"
+    }
+  },
+  "escalation": {
+    "confidence_threshold": 0.35,
+    "unanswered_limit": 2,
+    "out_of_scope_patterns": [
+      "oral surgery referral outside",
+      "orthognathic",
+      "sleep apnea surgery",
+      "hospital admission",
+      "workers comp",
+      "malpractice",
+      "legal advice",
+      "veterinary",
+      "pediatric hospital",
+      "cosmetic surgery"
+    ],
+    "sensitive_patterns": [
+      "bleeding won't stop",
+      "knocked out tooth",
+      "facial swelling",
+      "can't swallow",
+      "difficulty breathing",
+      "severe pain",
+      "pus",
+      "fever after extraction",
+      "nerve damage",
+      "allergic reaction",
+      "anaphylaxis",
+      "medical emergency",
+      "jaw locked",
+      "abscess spreading"
+    ],
+    "handoff_notes": {
+      "explicit_escalation": "Patient requested live staff — prioritize callback within 2 business hours.",
+      "angry_sentiment": "De-escalate; patient upset — office manager callback same day.",
+      "complaint": "Open service recovery ticket; review chart and billing before contact.",
+      "pricing_negotiation": "Fee questions outside chat scope — treatment coordinator to discuss options.",
+      "sensitive_unsupported": "Clinical concern — route to on-call dentist; do not diagnose via chat.",
+      "out_of_scope": "Out-of-scope request — clarify Northstar Dental services only.",
+      "low_confidence": "Low SOP match — verify with clinical or billing staff before replying.",
+      "sop_gap": "SOP gap — document for office manager; human answers on callback.",
+      "repeated_unanswered": "Multiple unresolved questions — schedule phone intake."
+    }
+  },
+  "sections": [
+    {
+      "id": "business_overview",
+      "title": "Business overview",
+      "body": "Northstar Dental is a family-focused general dentistry practice. Support agents answer only from this document. Clinical diagnosis, prescribing, and treatment planning are never done in chat — escalate to clinical staff."
+    },
+    {
+      "id": "hours",
+      "title": "Hours of operation",
+      "body": "| Day | Hours |\n|-----|-------|\n| Monday - Thursday | 8:00 AM - 5:30 PM |\n| Friday | 8:00 AM - 3:00 PM |\n| Saturday | 9:00 AM - 1:00 PM (hygiene only) |\n| Sunday | Closed |\n\nAfter-hours dental emergencies: call 555-0199 and press 1 for the on-call dentist. Non-urgent messages are returned the next business day."
+    },
+    {
+      "id": "services",
+      "title": "Services offered",
+      "body": "Northstar Dental provides:\n\n1. **Preventive care** — exams, cleanings, X-rays, fluoride.\n2. **Restorative** — fillings, crowns, bridges, dentures.\n3. **Endodontics** — root canal therapy (refer complex cases).\n4. **Extractions** — simple extractions; surgical cases referred to oral surgeon partners.\n5. **Cosmetic** — whitening, bonding (consultation required).\n6. **Orthodontics** — Invisalign and limited braces (consultation required).\n7. **Emergency visits** — same-day slots for severe pain, swelling, or trauma when available.\n\nWe do **not** offer hospital sedation dentistry, orthognathic surgery, or veterinary dental care. Refer those requests to appropriate specialists."
+    },
+    {
+      "id": "booking",
+      "title": "Booking and appointments",
+      "body": "- Schedule by **phone** (555-0199) or **online portal** at northstar-dental.example/appointments.\n- **New patients** need a 60-minute comprehensive exam and health history before treatment.\n- **Emergency slots** are held daily at 10:00 AM and 2:00 PM; call for same-day pain or swelling.\n- Arrive **15 minutes early** with insurance card and photo ID.\n- **Pediatric patients** under 12 must be accompanied by a parent or guardian."
+    },
+    {
+      "id": "insurance",
+      "title": "Insurance and billing",
+      "body": "- We accept most PPO dental plans; verify benefits before major treatment.\n- **Pre-authorization** is required for crowns, implants, and orthodontics — billing team handles this.\n- Estimates are provided after exam; exact benefits depend on your carrier.\n- Payment due at time of service unless a payment plan is approved by the office manager.\n- **Insurance disputes** and claim denials must be escalated to billing — do not promise coverage in chat."
+    },
+    {
+      "id": "cancellation",
+      "title": "Cancellation and no-show policy",
+      "body": "- Cancel or reschedule at least **48 hours** before the appointment.\n- Late cancellations (under 48 hours) may incur a **$75 fee**.\n- **No-shows** may be charged $75 and may affect future booking priority.\n- Emergency cancellations due to illness are reviewed case-by-case by the front desk."
+    },
+    {
+      "id": "pricing",
+      "title": "Pricing and payments",
+      "body": "- Cleaning and exam for uninsured new patients start at **$189** (promotional rate subject to change).\n- Treatment fees vary by procedure; written estimates after exam.\n- We accept cards, HSA/FSA, and CareCredit where eligible.\n- **Price matching**, discounts beyond published promos, and payment-plan negotiations must be escalated."
+    },
+    {
+      "id": "escalation",
+      "title": "When to escalate to a human",
+      "body": "Escalate immediately when:\n\n- **Clinical emergency** — uncontrolled bleeding, facial swelling, difficulty breathing, knocked-out permanent tooth, or severe unrelieved pain.\n- **Post-procedure concern** — fever after extraction, spreading abscess, numbness lasting over 24 hours.\n- **Insurance or billing dispute** — claim denial, unexpected balance, pre-auth delay.\n- **Complaint** about staff, wait times, billing, or treatment outcome.\n- **Angry or distressed** patient, or explicit request for manager/human.\n- **Out of scope** — hospital care, oral surgery beyond simple extraction, legal matters.\n- **Pricing negotiation** beyond published rates or promos.\n- **Low confidence** or repeated unanswered questions after SOP review.\n\nTiered routing:\n- **Front desk** — scheduling conflicts, general policy.\n- **Billing coordinator** — insurance, estimates, payment plans.\n- **Clinical staff / on-call dentist** — pain, swelling, post-op complications.\n- **Office manager** — complaints, service recovery.\n\nHandoff: *\"I'm connecting you with our care coordination team now. They'll follow up shortly at the number on your account.\"*\n\nEmail: care@northstar-dental.example"
+    }
+  ]
+}

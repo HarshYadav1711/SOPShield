@@ -96,11 +96,13 @@ class Session:
             lines.append(f"[{t.stage.value}] {prefix}: {t.content}")
         return "\n".join(lines)
 
-    def save_transcript(self, directory: Path) -> Path:
+    def save_transcript(self, directory: Path, *, sop_id: str = "") -> Path:
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / f"{self.session_id}.txt"
+        sop_line = f"SOP: {sop_id}\n" if sop_id else ""
         header = (
             f"SOPShield session {self.session_id}\n"
+            f"{sop_line}"
             f"Started: {self.started_at}\n"
             f"Escalated: {self.escalation.escalated}\n"
             f"{'=' * 60}\n\n"

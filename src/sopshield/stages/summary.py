@@ -5,22 +5,26 @@ from __future__ import annotations
 import re
 
 from sopshield.escalation import handoff_note_deterministic
-from sopshield.prompts import SUMMARY_SYSTEM, SUMMARY_USER_TEMPLATE
+from sopshield.prompts import SUMMARY_USER_TEMPLATE, summary_system
 from sopshield.providers.base import LLMProvider
 from sopshield.session import Session
+from sopshield.sop.loader import SOPDocument
 from sopshield.stages.qualification import detect_service
 
 _INTENT_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"\bhours?\b", re.I), "Clinic hours / scheduling"),
+    (re.compile(r"\bhours?\b", re.I), "Office hours / scheduling"),
     (re.compile(r"\bbook|appointment|schedule\b", re.I), "Booking or appointment"),
     (re.compile(r"\bcancel|reschedul", re.I), "Cancellation or reschedule"),
-    (re.compile(r"\bbotox|filler|laser|peel|microneedling\b", re.I), "Service information"),
-    (re.compile(r"\bprice|cost|fee\b", re.I), "Pricing inquiry"),
+    (re.compile(r"\bprice|cost|fee|insurance\b", re.I), "Pricing or billing inquiry"),
     (re.compile(r"\bcomplain|refund|furious|ridiculous|frustrated\b", re.I), "Service concern / escalation"),
 ]
 
 
-def generate_summary(session: Session, provider: LLMProvider) -> str:
+def generate_summary(
+    session: Session,
+    sop: SOPDocument,
+    provider: LLMProvider,
+) -> str:
     """Optional LLM summary — escalation decisions are never delegated to the model."""
     esc_lines = _format_escalation_lines(session)
     qual_lines = _format_qualification_lines(session)
@@ -34,20 +38,20 @@ def generate_summary(session: Session, provider: LLMProvider) -> str:
         sop_gaps=gaps,
         unanswered=unanswered,
     )
-    response = provider.complete(SUMMARY_SYSTEM, user_prompt)
+    response = provider.complete(summary_system(sop), user_prompt)
     return response.text
 
 
-def format_summary_deterministic(session: Session) -> str:
+def format_summary_deterministic(session: Session, sop: SOPDocument) -> str:
     """Structured handoff summary — always available without an API."""
-    intent = infer_customer_intent(session)
-    details = format_collected_details(session)
+    intent = infer_customer_intent(session, sop)
+    details = format_collected_details(session, sop)
     unanswered = format_unanswered(session)
     gaps = format_sop_gaps(session)
-    escalation = format_escalation_section(session)
-    next_action = recommend_next_action(session)
+    escalation = format_escalation_section(session, sop)
+    next_action = recommend_next_action(session, sop)
 
-    return f"""## Session Summary — Bloom Aesthetics Clinic
+    return f"""## Session Summary — {sop.business_name}
 
 ### 1. Customer intent
 {intent}
@@ -69,7 +73,11 @@ def format_summary_deterministic(session: Session) -> str:
 """
 
 
-def explain_handoff(session: Session, provider: LLMProvider | None = None) -> str:
+def explain_handoff(
+    session: Session,
+    sop: SOPDocument,
+    provider: LLMProvider | None = None,
+) -> str:
     """
     Short operator note after escalation.
     Deterministic by default; optional provider only elaborates the handoff.
@@ -78,7 +86,7 @@ def explain_handoff(session: Session, provider: LLMProvider | None = None) -> st
         return ""
     event = session.escalation.events[-1]
     if provider is None:
-        return handoff_note_deterministic(event)
+        return handoff_note_deterministic(event, sop)
 
     from sopshield.prompts import HANDOFF_EXPLAIN_SYSTEM, HANDOFF_EXPLAIN_USER
 
@@ -94,10 +102,10 @@ def explain_handoff(session: Session, provider: LLMProvider | None = None) -> st
             return text
     except Exception:
         pass
-    return handoff_note_deterministic(event)
+    return handoff_note_deterministic(event, sop)
 
 
-def infer_customer_intent(session: Session) -> str:
+def infer_customer_intent(session: Session, sop: SOPDocument) -> str:
     user_msgs = [t.content for t in session.turns if t.role == "user"]
     if not user_msgs:
         return "Unknown — no customer messages captured."
@@ -123,7 +131,7 @@ def infer_customer_intent(session: Session) -> str:
     return f"General inquiry: {first}"
 
 
-def format_collected_details(session: Session) -> str:
+def format_collected_details(session: Session, sop: SOPDocument) -> str:
     state = session.qualification_state
     if state.service_interest or state.client_status or state.contact:
         lines = [f"  - {state.compact_summary()}"]
@@ -131,9 +139,8 @@ def format_collected_details(session: Session) -> str:
             lines.append(f"  - Detail: {state.service_detail}")
         return "\n".join(lines)
     if not session.qualification:
-        # Pull service hints from FAQ thread
         for msg in session.user_messages():
-            svc = detect_service(msg)
+            svc = detect_service(msg, sop)
             if svc:
                 return f"  - Mentioned service (not fully qualified): {svc}"
         return "  - None collected."
@@ -156,7 +163,7 @@ def format_sop_gaps(session: Session) -> str:
     return "\n".join(f"  - {g}" for g in session.sop_gaps)
 
 
-def format_escalation_section(session: Session) -> str:
+def format_escalation_section(session: Session, sop: SOPDocument) -> str:
     if not session.escalation.escalated or not session.escalation.events:
         return "None."
 
@@ -168,7 +175,7 @@ def format_escalation_section(session: Session) -> str:
     return "\n".join(lines)
 
 
-def recommend_next_action(session: Session) -> str:
+def recommend_next_action(session: Session, sop: SOPDocument) -> str:
     if not session.escalation.escalated:
         state = session.qualification_state
         if state.completed and state.contact:
@@ -176,17 +183,18 @@ def recommend_next_action(session: Session) -> str:
                 "Send booking link or confirm consultation per SOP; "
                 f"callback at {state.contact} within one business day."
             )
-        return (
-            "Send booking link or confirm appointment per SOP if customer is ready."
-        )
+        return "Send booking link or confirm appointment per SOP if customer is ready."
 
     last = session.escalation.events[-1]
+    if last.reason.value in sop.escalation.handoff_notes:
+        return sop.escalation.handoff_notes[last.reason.value]
+
     actions = {
         "explicit_escalation": "Assigned agent to call or email within 4 business hours.",
         "angry_sentiment": "Senior front-desk callback same day; acknowledge frustration first.",
         "complaint": "Open complaint ticket; supervisor review before clinical discussion.",
         "pricing_negotiation": "Front desk to share published pricing — no ad-hoc discounts via chat.",
-        "sensitive_unsupported": "Nurse or provider to review clinical question — do not answer via bot.",
+        "sensitive_unsupported": "Clinical staff to review concern — do not answer via bot.",
         "out_of_scope": "Clarify scope politely; offer in-clinic services only.",
         "low_confidence": "Research SOP/update KB, then respond with verified information.",
         "sop_gap": "Document gap for SOP owner; human answers question on callback.",

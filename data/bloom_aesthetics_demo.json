@@ -1,0 +1,85 @@
+{
+  "document": {
+    "id": "bloom_aesthetics_demo",
+    "title": "Bloom Aesthetics Clinic — Standard Operating Procedures",
+    "business_name": "Bloom Aesthetics Clinic",
+    "version": "1.0",
+    "scope": "Front-desk and chat support for prospective and existing clients."
+  },
+  "contact": {
+    "phone": "555-0142",
+    "email": "support@bloom-aesthetics.example",
+    "portal": "bloom-aesthetics.example/book"
+  },
+  "conversation": {
+    "tone": "calm, professional, warm, and concise — appropriate for a small aesthetics clinic"
+  },
+  "qualification": {
+    "services": [
+      {"pattern": "\\bbotox\\b", "label": "Botox"},
+      {"pattern": "\\b(dermal\\s+)?fillers?\\b", "label": "Dermal fillers"},
+      {"pattern": "\\bchemical\\s+peels?\\b", "label": "Chemical peel"},
+      {"pattern": "\\blaser\\s+hair\\s+removal\\b", "label": "Laser hair removal"},
+      {"pattern": "\\blaser\\b", "label": "Laser hair removal"},
+      {"pattern": "\\bmicroneedling\\b", "label": "Microneedling"}
+    ],
+    "questions": {
+      "service_interest": "Which treatment were you hoping to learn about or book? (For example, Botox, fillers, laser hair removal, or a chemical peel.)",
+      "client_status": "Have you visited Bloom Aesthetics before, or would this be your first time with us?"
+    }
+  },
+  "escalation": {
+    "confidence_threshold": 0.35,
+    "unanswered_limit": 2,
+    "out_of_scope_patterns": [
+      "insurance claim",
+      "malpractice",
+      "prescription",
+      "dental",
+      "surgery",
+      "laser eye",
+      "covid vaccine",
+      "workers comp",
+      "financing plan",
+      "legal advice",
+      "attorney"
+    ]
+  },
+  "sections": [
+    {
+      "id": "business_overview",
+      "title": "Business overview",
+      "body": "Bloom Aesthetics Clinic is a boutique medical aesthetics practice serving SMB clients in a calm, professional setting. Support agents must answer only from this document. If information is not listed here, do not guess—escalate to a human team member."
+    },
+    {
+      "id": "hours",
+      "title": "Hours of operation",
+      "body": "| Day | Hours |\n|-----|-------|\n| Monday - Friday | 9:00 AM - 6:00 PM |\n| Saturday | 10:00 AM - 4:00 PM |\n| Sunday | Closed |\n\nHoliday closures are announced on the website and voicemail. After-hours messages are returned the next business day."
+    },
+    {
+      "id": "services",
+      "title": "Services offered",
+      "body": "Bloom Aesthetics provides the following treatments (consultation required for first-time clients):\n\n1. **Botox** — wrinkle reduction; typical session 15–20 minutes.\n2. **Dermal fillers** — volume and contour; consultation required to select product.\n3. **Chemical peels** — light and medium depth; not performed on active sunburn or pregnancy.\n4. **Laser hair removal** — multiple sessions; patch test required for new clients.\n5. **Microneedling** — skin texture and fine lines; 3–5 days mild redness expected.\n\nWe do **not** offer surgical procedures, dental work, or general medical primary care. Refer those requests to appropriate specialists."
+    },
+    {
+      "id": "booking",
+      "title": "Booking and appointments",
+      "body": "- Appointments are scheduled by **phone** (555-0142) or through the **online portal** at bloom-aesthetics.example/book.\n- New clients need a **15-minute phone consultation** before their first treatment appointment.\n- Please arrive **10 minutes early** with a valid ID and completed intake form.\n- Same-day bookings are accepted only when availability is shown in the portal; call for urgent slots."
+    },
+    {
+      "id": "cancellation",
+      "title": "Cancellation and rescheduling",
+      "body": "- Cancellations or reschedules must be made **at least 24 hours** before the appointment time.\n- Late cancellations (under 24 hours) may incur a **$50 fee** per our policy.\n- No-shows may be charged the full treatment deposit where applicable.\n- To cancel, call 555-0142 or use the portal link in your confirmation email."
+    },
+    {
+      "id": "pricing",
+      "title": "Pricing and payments",
+      "body": "- Treatment pricing is discussed during consultation; we do not quote exact filler or laser package prices in chat without a chart review.\n- We accept major credit cards, debit, and HSA/FSA where eligible.\n- Payment plans are not offered; financing questions should be escalated."
+    },
+    {
+      "id": "escalation",
+      "title": "When to escalate to a human",
+      "body": "Escalate immediately when:\n\n- The client is **angry**, threatening, or uses abusive language.\n- The client **requests a manager** or human agent.\n- The question is **outside this SOP** (medical advice, legal, insurance disputes, custom discounts).\n- There is a **complaint** about staff, billing, or clinical outcome.\n- The same question was **not answered twice** after checking the SOP.\n- **Low confidence**: the answer is not clearly supported by this document.\n\nEscalation handoff: *\"I'm connecting you with our front-desk team now. They'll follow up shortly at the number on your account.\"*\n\nSupport email for escalations: support@bloom-aesthetics.example (monitored business hours)."
+    }
+  ]
+}

@@ -16,9 +16,10 @@ if hasattr(sys.stdout, "reconfigure"):
 from sopshield.providers.base import LLMProvider
 from sopshield.providers.ollama import OllamaProvider
 from sopshield.providers.rule_based import RuleBasedProvider
+from sopshield.sop.loader import data_directory, list_sops, resolve_sop_path
 from sopshield.workflow import ConversationWorkflow
 
-DEFAULT_SOP = Path(__file__).resolve().parents[2] / "data" / "bloom_aesthetics_sop.json"
+DEFAULT_SOP = "bloom_aesthetics_demo"
 DEFAULT_TRANSCRIPTS = Path(__file__).resolve().parents[2] / "transcripts"
 
 
@@ -35,14 +36,22 @@ def _build_provider(name: str) -> LLMProvider:
 
 
 def main(argv: list[str] | None = None) -> int:
+    available = list_sops()
     parser = argparse.ArgumentParser(
         description="SOPShield — SOP-grounded customer support workflow (CLI)",
     )
     parser.add_argument(
         "--sop",
-        type=Path,
         default=DEFAULT_SOP,
-        help="Path to SOP file (.json or .md)",
+        help=(
+            "SOP id or file path (default: bloom_aesthetics_demo). "
+            f"Available: {', '.join(available) or 'none'}"
+        ),
+    )
+    parser.add_argument(
+        "--list-sops",
+        action="store_true",
+        help="List SOP ids discovered in the data/ directory and exit",
     )
     parser.add_argument(
         "--provider",
@@ -75,13 +84,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if not args.sop.is_file():
-        print(f"SOP file not found: {args.sop}", file=sys.stderr)
+    if args.list_sops:
+        data_dir = data_directory()
+        ids = list_sops(data_dir)
+        if not ids:
+            print(f"No SOP JSON files found in {data_dir}", file=sys.stderr)
+            return 1
+        for sop_id in ids:
+            path = resolve_sop_path(sop_id, data_dir)
+            print(f"{sop_id}\t{path}")
+        return 0
+
+    try:
+        sop_path = resolve_sop_path(args.sop)
+    except FileNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
 
     provider = _build_provider(args.provider)
     workflow = ConversationWorkflow.from_paths(
-        args.sop,
+        sop_path,
         provider,
         use_llm_summary=args.llm_summary,
         use_llm_handoff_note=args.llm_handoff_note,

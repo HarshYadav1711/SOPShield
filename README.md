@@ -2,7 +2,7 @@
 
 SOPShield is a **SOP-first** customer support workflow for SMB clinics. It simulates a full chat session in four stages—FAQ, lead qualification, escalation detection, and a structured handoff summary—while answering **only** from a documented Standard Operating Procedures file.
 
-**Sample business:** [Bloom Aesthetics Clinic](data/bloom_aesthetics_sop.json) (hours, services, booking, cancellation, escalation rules). A [markdown copy](data/bloom_aesthetics_sop.md) is also available.
+**Sample businesses:** [Bloom Aesthetics Demo](data/bloom_aesthetics_demo.json) (assignment example) · [Northstar Dental](data/northstar_dental.json) (advanced escalation workflow)
 
 ---
 
@@ -17,15 +17,23 @@ python -m venv .venv
 # source .venv/bin/activate     # macOS/Linux
 
 pip install -e ".[dev]"
-sopshield
+python main.py --sop bloom_aesthetics_demo
 ```
 
 Interactive CLI: type your questions, then `quit` to end. Transcripts are saved under `transcripts/`.
 
+**Select a business SOP:**
+
+```bash
+python main.py --sop bloom_aesthetics_demo
+python main.py --sop northstar_dental
+python main.py --list-sops
+```
+
 **Non-interactive (CI / demos):**
 
 ```bash
-sopshield -m "What are your hours on Saturday?" -m "Botox" -m "new client" -m "555-0142"
+python main.py --sop bloom_aesthetics_demo -m "What are your hours on Saturday?" -m "Botox" -m "new client" -m "555-0142"
 ```
 
 ---
@@ -61,13 +69,17 @@ sopshield --provider openai --llm-summary
 ## Project layout
 
 ```
-data/bloom_aesthetics_sop.json # Structured source of truth (default)
-data/bloom_aesthetics_sop.md   # Markdown alternative (.md also supported)
+data/
+  bloom_aesthetics_demo.json   # Assignment example (default)
+  northstar_dental.json        # Advanced SMB escalation demo
+  bloom_aesthetics_sop.json    # Legacy alias (optional)
+  bloom_aesthetics_sop.md      # Markdown alternative (.md also supported)
+main.py                        # python main.py --sop <id>
 src/sopshield/
-  cli.py                       # CLI entry
+  cli.py                       # CLI entry (also: sopshield)
   workflow.py                  # Stage orchestration
-  escalation.py                # Escalation rules
-  sop/                         # Load + retrieve SOP
+  escalation.py                # Escalation rules (SOP-configurable)
+  sop/                         # Load, discover, retrieve SOP
   stages/                      # FAQ, qualification, summary
   providers/                   # Pluggable LLM backends
 prompt_design.md               # Prompts & safety design
@@ -130,7 +142,7 @@ Record a short screen capture showing:
 
 ## Data source
 
-All factual answers come from `data/bloom_aesthetics_sop.json` (or `.md`). To use another fictional SMB, replace that file—JSON uses a `sections` array with `title` and `body`; markdown uses `##` headings for retrieval.
+All factual answers come from JSON SOP files in `data/`. Each file defines business identity, conversation copy, qualification fields, escalation rules, and retrievable policy sections. Add a new SMB by dropping a new JSON file in `data/` and running `python main.py --sop <id>`.
 
 ---
 
