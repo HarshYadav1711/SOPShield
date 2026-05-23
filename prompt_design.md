@@ -1,10 +1,14 @@
-# SOPShield — Prompt & Safety Design
+# Prompt & safety design
 
-This document explains how SOPShield stays grounded in the Standard Operating Procedures (SOP), when it escalates, and how tone is enforced. The canonical system prompt lives in `src/sopshield/prompts.py`.
+SOPShield treats the Standard Operating Procedures (SOP) as the only source of truth for customer-facing facts. Prompts, retrieval gates, and escalation rules exist to keep answers accurate, auditable, and appropriate for a small clinic front desk.
+
+The canonical prompt strings live in `src/sopshield/prompts.py`. This document explains what they do and why.
 
 ---
 
 ## Full system prompt (FAQ stage)
+
+The FAQ system prompt is built per business from the loaded SOP (`system_prompt(sop)`). For **Bloom Aesthetics Clinic**, it resolves to:
 
 ```
 You are the virtual front-desk assistant for Bloom Aesthetics Clinic.
@@ -19,114 +23,180 @@ RULES (non-negotiable):
 When answering FAQs, cite only facts present in the excerpts. Prefer short paragraphs or bullet points.
 ```
 
-Each user turn includes **only** retrieved SOP sections (not the full document), formatted as:
+Each FAQ turn also sends a **user** message shaped like this (from `FAQ_USER_TEMPLATE`):
 
 ```
 SOP excerpts:
-{retrieved sections}
+{retrieved sections — never the full SOP file}
 
 Customer question: {question}
 
 Reply using only the excerpts above. If the answer is not in the excerpts, say so and offer a human handoff.
 ```
 
+### Supplementary prompts (other stages)
+
+**Qualification** does not use an LLM. Copy comes from the SOP JSON (`qualification_intro`, question templates, acknowledgments).
+
+**Summary (optional LLM)** — `summary_system(sop)`:
+
+```
+You produce structured session summaries for {business_name} support handoffs.
+Use ONLY facts from the conversation transcript and notes provided.
+Flag any SOP gaps explicitly. Do not invent customer details.
+Escalation was already decided by rules — do not change escalation status.
+```
+
+**Handoff note (optional LLM)** — one sentence for operators; must not invent outcomes:
+
+```
+You write one short sentence for a clinic front-desk operator explaining why a chat was escalated.
+Use only the reason and customer message given. Do not invent facts or promise outcomes.
+```
+
+Deterministic summaries and handoff notes are the default so handoffs work without an API.
+
+---
+
+## Tone and persona
+
+**Persona:** A front-desk coordinator at a boutique aesthetics practice—not a generic chatbot or “AI assistant.”
+
+| Principle | Why it matters |
+|-----------|----------------|
+| **Calm** | Many chats are scheduling or policy questions; tone should not amplify stress. |
+| **Professional** | Owners and compliance reviewers read transcripts; language should hold up in QA. |
+| **Warm, not chatty** | Brief empathy (“Thanks for asking”) without filler or exaggerated enthusiasm. |
+| **Concise** | Mobile customers skim; one clear answer beats a paragraph of disclaimers. |
+
+The tone string is stored in each SOP (`conversation.tone`) so a dental practice and an aesthetics clinic can share the same engine with different voice guidelines.
+
+Qualification uses **fixed templates** (not model-generated questions) so intake stays consistent across sessions and easy to audit.
+
 ---
 
 ## Hallucination prevention
 
-| Layer | Mechanism |
-|-------|-----------|
-| **Retrieval gate** | Questions must match SOP sections above a confidence threshold (`0.35`) before any model is called. |
-| **Context isolation** | The model never sees the full SOP—only top-ranked sections for that turn. |
-| **Instruction** | System + user prompts forbid inventing facts and require an explicit “not in guidelines” response. |
-| **Post-check** | `_response_grounded()` flags replies that introduce many numeric claims absent from retrieved text. |
-| **Offline default** | `RuleBasedProvider` composes answers only from retrieved lines—no generative drift in default mode. |
-| **SOP gap log** | Unanswered topics are stored on the session for the summary’s “SOP gaps” section. |
+Generative models will fill gaps if allowed. SOPShield layers constraints so “helpful” guessing is harder than saying “I don’t know.”
 
-If retrieval fails, the workflow **does not** call the model with empty context; it returns a fixed safe message and escalates when appropriate.
-
----
-
-## Confidence-based escalation logic
-
-Confidence comes from lexical overlap between the customer message and SOP section titles/bodies (BM25-lite scoring, normalized to `0–1`).
-
-| Signal | Threshold / rule | Escalation reason |
-|--------|------------------|-------------------|
-| Low retrieval confidence | `< 0.35` | `low_confidence` |
-| No SOP support for answer | `answered_from_sop=False` (confidence OK) | `sop_gap` |
-| Same failure twice | `unanswered_streak >= 2` | `repeated_unanswered` |
-| Angry / frustrated tone | Regex lexicon | `angry_sentiment` |
-| Complaint / refund / clinical harm | Regex lexicon (before tone) | `complaint` |
-| Pricing negotiation pressure | Regex lexicon | `pricing_negotiation` |
-| Medical / sensitive clinical | Regex lexicon | `sensitive_unsupported` |
-| Explicit human request | Regex lexicon | `explicit_escalation` |
-| Out-of-scope topics | Regex (insurance, surgery, financing, etc.) | `out_of_scope` |
-
-Escalation is **rule-first** (auditable in `escalation.py`). Optional LLM backends do not override these triggers.
-
-Handoff copy is fixed and aligned with the SOP:
-
-> *I'm connecting you with our front-desk team now. They'll follow up shortly at the number on your account.*
-
----
-
-## Tone & persona reasoning
-
-**Persona:** Front-desk coordinator at a boutique aesthetics clinic—not a generic “AI helper.”
-
-**Tone principles:**
-- **Calm** — de-escalation language; no arguing or over-apologizing.
-- **Professional** — complete sentences, no slang; suitable for SMB owners reviewing transcripts.
-- **Human** — brief empathy (“Thanks for asking”) without performative filler.
-- **Scoped** — short answers; offer booking help only when relevant to the SOP.
-
-Qualification questions are templated (not generated) so they stay consistent and reviewable. Summaries use a deterministic template by default; optional LLM summary mode must still receive the full transcript and explicit gap list.
-
----
-
-## Stage-specific prompts
-
-### Stage 2 — Qualification
-
-No LLM generation. Stateful intake in `qualification.py`:
-
-| Field | When asked |
+| Layer | What it does |
 |-------|----------------|
-| Service interest | Skipped if already mentioned in FAQ (e.g., “Botox hours”) |
-| Service detail | One follow-up only when interest is vague (“something for my face”) |
-| New vs returning | Always — drives booking SOP (consultation for new clients) |
-| Contact | Skipped if phone/email appeared earlier in the thread |
+| **Retrieval gate** | FAQ runs only when lexical match confidence meets the SOP threshold (default `0.35`). |
+| **Context isolation** | The model sees top-ranked **sections**, not the full SOP—reducing bleed from unrelated policies. |
+| **Support check** | `sop_supports_answer()` requires token overlap between the question and retrieved lines before composing a reply. |
+| **Prompt contract** | System + user prompts forbid inventing hours, prices, policies, or services. |
+| **Post-check** | `response_grounded()` flags replies that introduce many numeric claims absent from retrieved text. |
+| **Safe fallbacks** | Fixed copy when retrieval fails or the answer cannot be grounded (`faq_fallback_no_sop`, `faq_fallback_ungrounded`). |
+| **Rule-based default** | `RuleBasedProvider` extracts lines from excerpts only—no generative drift in the default path. |
+| **SOP gap log** | Unanswered topics are stored on the session and appear in the summary for SOP owners. |
 
-- **2–3 questions** in practice: only gaps are asked, one at a time.
-- **Tone:** Natural acknowledgments (“Got it — Botox.”), no `(1/3)` counters.
-- **Storage:** `Session.qualification_state` (structured dict) plus `qualification[]` audit trail.
-- **Output:** `format_qualification_summary()` — compact line for handoff, appended to transcript file.
+If retrieval fails, the workflow does **not** call the model with empty context. It returns the configured fallback and evaluates escalation.
 
-Intro: warm transition after the first successful FAQ answer (`QUALIFICATION_INTRO`).
+---
 
-### Stage 4 — Summary
+## Confidence-based escalation
 
-Deterministic summary (`format_summary_deterministic()`) always includes: Customer intent, Collected details, Unanswered/unsupported questions, SOP gaps, Escalation reason, Recommended next action. Optional LLM summary (`--llm-summary`) may rephrase but must not change rule-based escalation. Handoff operator notes use `handoff_note_deterministic()` by default; `--llm-handoff-note` only elaborates the explanation.
+Retrieval confidence is a normalized `0–1` score from BM25-style lexical overlap between the customer message and SOP section titles/bodies (`src/sopshield/sop/retrieval.py`).
+
+When a question cannot be answered from the SOP (`answered_from_sop=False`), `check_message()` in `escalation.py` applies:
+
+1. Increment `unanswered_streak`.
+2. If `unanswered_streak >= unanswered_limit` (default **2**) → `repeated_unanswered`.
+3. Else if `retrieval_confidence < confidence_threshold` (default **0.35**) → `low_confidence`.
+4. Else → `sop_gap` (matched sections exist but do not substantively answer the question).
+
+**Immediate lexical escalations** (evaluated before FAQ generation) take priority:
+
+| Signal | Reason code |
+|--------|-------------|
+| Explicit human / manager request | `explicit_escalation` |
+| Complaint, refund, harm language | `complaint` |
+| Angry or frustrated tone | `angry_sentiment` |
+| Price match / discount pressure | `pricing_negotiation` |
+| Clinical safety (pregnancy, meds, symptoms, etc.) | `sensitive_unsupported` |
+| Out-of-scope topics (financing, surgery, legal, etc.) | `out_of_scope` |
+
+Optional LLM backends **do not** override these triggers. Handoff copy comes from the SOP (`conversation.handoff_message`).
+
+**Note:** The shipped CLI ends the session on the first unsupported FAQ. The `repeated_unanswered` path is still defined and tested (`tests/test_escalation.py`) for consecutive misses when streak state is preserved—useful if multi-turn FAQ before handoff is added later.
+
+---
+
+## Why answers are constrained to SOP data only
+
+SMB clinics run on written policies: hours, cancellation fees, what services exist, when to escalate. A wrong hour or invented refund policy creates real liability and rework.
+
+SOP-only answers give:
+
+- **Traceability** — reviewers can compare the reply to a specific SOP section.
+- **Updateability** — change the JSON/Markdown SOP, not prompt fine-tuning, when policy changes.
+- **Honest limits** — “not in our guidelines” is preferable to a confident wrong answer.
+- **Role boundaries** — front-desk SOPs are not medical charts; the bot should not diagnose or negotiate custom pricing.
+
+The product is deliberately **not** a general knowledge assistant. Out-of-scope and sensitive patterns exist to route those threads to humans early.
+
+---
+
+## Why the workflow uses strict stages
+
+The pipeline is fixed: **FAQ → Qualification → Escalation (continuous) → Summary**.
+
+```
+Customer message
+       │
+       ▼
+┌──────────────┐     lexical rules (complaint, human request, …)
+│  Escalation  │◄────────────────────────────────────────────┐
+│  pre-check   │                                              │
+└──────┬───────┘                                              │
+       │ no immediate trigger                                  │
+       ▼                                                      │
+┌──────────────┐     retrieval + grounded answer              │
+│     FAQ      │──────────────────────────────────────────────┤
+└──────┬───────┘                                              │
+       │ first grounded FAQ                                    │
+       ▼                                                      │
+┌──────────────┐                                              │
+│Qualification │  templated intake (service, client, contact)│
+└──────┬───────┘                                              │
+       │ complete                                              │
+       ▼                                                      │
+┌──────────────┐     rule-based or optional LLM              │
+│   Summary    │                                              │
+└──────────────┘                                              │
+       ▲                                                      │
+       └──────── escalation anytime ──────────────────────────┘
+```
+
+**Why stages are separated:**
+
+| Stage | Rationale |
+|-------|-----------|
+| **FAQ** | Answer policy questions from retrieved excerpts only; separate “what we know” from “who you are.” |
+| **Qualification** | Structured intake for booking handoff; no model creativity on required fields. |
+| **Escalation** | Deterministic, testable rules; same behavior with `rule`, Ollama, or OpenAI. |
+| **Summary** | Operator artifact with fixed sections; escalation status is never re-decided by the model. |
+
+Mixing FAQ and intake in one free-form chat makes transcripts hard to review and lets models skip intake or invent qualification data. Stages keep each turn’s job obvious in logs under `transcripts/`.
 
 ---
 
 ## Provider abstraction
 
-All stages call `LLMProvider.complete(system, user)`:
+All generative calls use `LLMProvider.complete(system, user)`:
 
-| Provider | Use case |
-|----------|----------|
-| `rule` (default) | Free, deterministic, ideal for tests and demos |
-| `ollama` | Local free models via Ollama |
-| `openai` | Optional; isolated in `openai_api.py` |
+| Provider | Role |
+|----------|------|
+| `rule` (default) | Offline, deterministic; ideal for CI and demos |
+| `ollama` | Local models via Ollama |
+| `openai` | Optional cloud model (`pip install -e ".[openai]"`) |
 
-Swapping providers does not change escalation rules or retrieval gates.
+Swapping providers does not change retrieval thresholds, escalation rules, or qualification templates.
 
 ---
 
 ## Design tradeoffs
 
-- **Lexical retrieval** avoids embedding API costs but may miss paraphrases → mitigated by conservative escalation on low confidence.
-- **Early transition to qualification** after the first grounded FAQ keeps sessions short for assessment; transcripts demonstrate each stage explicitly.
-- **Regex sentiment** is imperfect but transparent; production systems might add a lightweight classifier later without changing workflow shape.
+- **Lexical retrieval** avoids embedding cost and keeps behavior explainable; unusual phrasing may score low → safe escalation.
+- **First grounded FAQ → qualification** keeps sessions short while still demonstrating each stage in transcripts.
+- **Regex sentiment** is imperfect but transparent; a classifier could be added later without changing stage boundaries.

@@ -1,9 +1,17 @@
-# Transcript: Escalation — angry / frustrated sentiment
+# Escalation — angry / frustrated tone
 
-**Behavior:** Stage 3 — hostile or frustrated language → immediate handoff + structured summary  
-**Command:** `sopshield -m "This is ridiculous, I'm furious about my appointment!"`
+**SOP:** `bloom_aesthetics_demo`  
+**Command:**
+
+```bash
+python main.py --sop bloom_aesthetics_demo -m "This is ridiculous, I'm furious about my appointment!"
+```
+
+**Trigger:** Angry sentiment regex fires before FAQ generation
 
 ---
+
+**Assistant:** Hello, and thank you for contacting Bloom Aesthetics Clinic. I'm here to help with hours, services, booking, and policies. What can I help you with today?
 
 **Customer:** This is ridiculous, I'm furious about my appointment!
 
@@ -34,8 +42,8 @@ Senior front-desk callback same day; acknowledge frustration first.
 
 ---
 
-**Validation notes**
-- Escalation fires on deterministic regex before any FAQ generation
-- No invented remediation or compensation
-- Summary gives operator intent, escalation reason, and concrete next step
-- Escalation logged in transcript file under `ESCALATION LOG`
+**Checks**
+
+- No FAQ answer attempted; no invented compensation or reschedule promise
+- Summary gives operator intent, reason, and a concrete next step
+- Escalation recorded in runtime transcript under escalation log

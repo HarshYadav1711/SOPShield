@@ -1,9 +1,15 @@
-# Transcript: Escalation — explicit human request
+# Escalation — explicit request for a person
 
-**Behavior:** Stage 3 — customer asks for a person/manager  
-**Command:** `sopshield -m "I need to speak to a manager right now"`
+**SOP:** `bloom_aesthetics_demo`  
+**Command:**
+
+```bash
+python main.py --sop bloom_aesthetics_demo -m "I need to speak to a manager right now"
+```
 
 ---
+
+**Assistant:** Hello, and thank you for contacting Bloom Aesthetics Clinic. I'm here to help with hours, services, booking, and policies. What can I help you with today?
 
 **Customer:** I need to speak to a manager right now
 
@@ -11,12 +17,18 @@
 
 ---
 
-## Session Summary (excerpt)
+## Session Summary — Bloom Aesthetics Clinic
 
-### 5. Escalation status
-ESCALATED — explicit_escalation
+### 5. Escalation reason
+- **explicit_escalation**: Customer explicitly asked for a human team member.
+- Operator note: Customer requested a live agent. (explicit_escalation)
+
+### 6. Recommended next action
+Assigned agent to call or email within 4 business hours.
 
 ---
 
-**Validation notes**
-- Immediate handoff; no further qualification
+**Checks**
+
+- Handoff on first message; qualification skipped
+- Matches SOP escalation section: client requests a manager
