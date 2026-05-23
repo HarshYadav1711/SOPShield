@@ -74,6 +74,8 @@ class Session:
     qualification_state: QualificationState = field(default_factory=QualificationState)
     escalation: EscalationState = field(default_factory=EscalationState)
     sop_gaps: list[str] = field(default_factory=list)
+    unanswered_questions: list[str] = field(default_factory=list)
+    handoff_note: str = ""
     faq_count: int = 0
     started_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -111,5 +113,11 @@ class Session:
                 f"{self.qualification_state.compact_summary()}\n\n"
                 f"Structured state:\n{self.qualification_state.as_dict()}\n"
             )
+        if self.escalation.events:
+            body += f"\n\n{'=' * 60}\nESCALATION LOG\n"
+            for e in self.escalation.events:
+                body += f"- {e.reason.value}: {e.detail}\n"
+            if self.handoff_note:
+                body += f"Operator note: {self.handoff_note}\n"
         path.write_text(header + body, encoding="utf-8")
         return path

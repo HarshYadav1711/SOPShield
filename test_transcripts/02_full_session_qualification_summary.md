@@ -1,76 +1,45 @@
-# Transcript: Full session — FAQ, qualification, summary
+# Transcript: Full session — FAQ, qualification, final summary
 
 **Behavior:** Stages 1 → 2 → 4 (no escalation)  
 **Command:** `sopshield -m "What are your hours on Saturday?" -m "Botox" -m "new client" -m "555-0142"`
 
 ---
 
-**Assistant:** Hello, and thank you for contacting Bloom Aesthetics Clinic. I'm here to help with hours, services, booking, and policies. What can I help you with today?
+**Assistant:** Hello, and thank you for contacting Bloom Aesthetics Clinic…
 
 **Customer:** What are your hours on Saturday?
 
-**Assistant:** [SOP-grounded Saturday hours — 10:00 AM – 4:00 PM]
+**Assistant:** [SOP-grounded Saturday hours — 10:00 AM – 4:00 PM] + qualification intro + service question
 
-Before we wrap up, I'd like to ask a couple of quick questions so our front-desk team can follow up — only what's helpful for booking. You can type 'skip' on any question.
+**Customer:** Botox → **Customer:** new client → **Customer:** 555-0142
 
-Which treatment were you hoping to learn about or book? (For example, Botox, fillers, laser hair removal, or a chemical peel.)
-
-**Customer:** Botox
-
-**Assistant:** Got it — Botox. Have you visited Bloom Aesthetics before, or would this be your first time with us?
-
-**Customer:** new client
-
-**Assistant:** Thanks — I've noted you're a new client. What's the best phone number or email for our front-desk team to follow up?
-
-**Customer:** 555-0142
-
-**Assistant:** Perfect — we'll use 555-0142 to reach you. Thank you — I have what our team needs for follow-up. Here's a quick summary of your visit:
-
-**Lead qualification**  
-Service: Botox · Client: new · Contact: 555-0142
-
-_Captured during intake:_
-- Service interest: Botox
-- Client status: new
-- Contact: 555-0142
+**Assistant:** Lead qualification block + structured session summary (below).
 
 ---
 
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-Primary topic from conversation: What are your hours on Saturday?
+Inquiry about Botox and clinic follow-up. *(or: Clinic hours / scheduling when FAQ-only intent)*
 
-### 2. Key details
+### 2. Collected details
 - Service: Botox · Client: new · Contact: 555-0142
 
-### 3. SOP gaps
-- None recorded
+### 3. Unanswered or unsupported questions
+- None.
 
-### 4. Recommended next action
-Send booking link or confirm appointment per SOP if customer is ready.
+### 4. SOP gaps
+- None recorded.
 
-### 5. Escalation status
-None
+### 5. Escalation reason
+None.
+
+### 6. Recommended next action
+Send booking link or confirm consultation per SOP; callback at 555-0142 within one business day.
 
 ---
 
-## Stored qualification record
-
-```json
-{
-  "service_interest": "Botox",
-  "service_detail": null,
-  "client_status": "new",
-  "contact": "555-0142",
-  "pending_field": null,
-  "completed": true
-}
-```
-
 **Validation notes**
-- Three targeted questions (service, client status, contact) — no numbered script
-- Answers stored in `qualification_state` and audit list `qualification`
-- Compact lead summary generated before session summary
-- FAQ answers remain SOP-grounded; escalation rules unchanged
+- Six summary sections present for operator handoff
+- Qualification stored in `qualification_state` and audit list
+- FAQ remains SOP-grounded; escalation rules unchanged

@@ -36,8 +36,8 @@ sopshield -m "What are your hours on Saturday?" -m "Botox" -m "new client" -m "5
 |-------|----------|
 | **1. FAQ** | Retrieves relevant SOP sections, answers from excerpts only |
 | **2. Qualification** | Asks 3 structured questions; stores answers on the session |
-| **3. Escalation** | Rule-based detection: low confidence, out-of-scope, anger, complaints, explicit human request, repeated unanswered questions |
-| **4. Summary** | Structured summary: intent, key details, SOP gaps, next action, escalation status |
+| **3. Escalation** | Rule-based detection: explicit human request, angry/frustrated tone, complaints, pricing pressure, sensitive clinical questions, out-of-scope, low confidence, repeated unanswered |
+| **4. Summary** | Operator summary: intent, collected details, unanswered questions, SOP gaps, escalation reason, next action |
 
 See [prompt_design.md](prompt_design.md) for prompts, safety layers, and escalation thresholds.
 
@@ -93,10 +93,12 @@ Review expected behaviors in [test_transcripts/](test_transcripts/):
 - FAQ success from SOP  
 - Full qualification + summary  
 - Escalation: low confidence / SOP gap  
-- Escalation: angry sentiment  
+- Escalation: angry / frustrated sentiment (with full summary)  
 - Escalation: out-of-scope  
 - Escalation: explicit human request  
 - Escalation: complaint  
+- Escalation: pricing negotiation  
+- Full session: qualification + final summary  
 
 ---
 

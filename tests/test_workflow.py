@@ -20,7 +20,8 @@ def test_faq_then_qualification_flow():
     r3 = wf.handle("new client")
     r4 = wf.handle("555-0100")
     assert r4.done
-    assert "Session Summary" in r4.message or "Customer intent" in r4.message
+    assert "### 1. Customer intent" in r4.message
+    assert "### 6. Recommended next action" in r4.message
 
 
 def test_escalation_explicit():
@@ -30,3 +31,13 @@ def test_escalation_explicit():
     assert r.escalated
     assert r.done
     assert "connecting you" in r.message.lower()
+    assert "### 5. Escalation reason" in r.message
+    assert "explicit_escalation" in r.message
+
+
+def test_escalation_pricing():
+    wf = ConversationWorkflow.from_paths(SOP, RuleBasedProvider())
+    wf.start()
+    r = wf.handle("What's your lowest price? Can you beat this competitor?")
+    assert r.escalated
+    assert "pricing_negotiation" in r.message

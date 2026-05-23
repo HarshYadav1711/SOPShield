@@ -54,10 +54,12 @@ Confidence comes from lexical overlap between the customer message and SOP secti
 | Signal | Threshold / rule | Escalation reason |
 |--------|------------------|-------------------|
 | Low retrieval confidence | `< 0.35` | `low_confidence` |
-| No SOP support for answer | `answered_from_sop=False` | `sop_gap` (first time) |
+| No SOP support for answer | `answered_from_sop=False` (confidence OK) | `sop_gap` |
 | Same failure twice | `unanswered_streak >= 2` | `repeated_unanswered` |
-| Angry language | Regex lexicon | `angry_sentiment` |
-| Complaint / refund / clinical harm | Regex lexicon | `complaint` |
+| Angry / frustrated tone | Regex lexicon | `angry_sentiment` |
+| Complaint / refund / clinical harm | Regex lexicon (before tone) | `complaint` |
+| Pricing negotiation pressure | Regex lexicon | `pricing_negotiation` |
+| Medical / sensitive clinical | Regex lexicon | `sensitive_unsupported` |
 | Explicit human request | Regex lexicon | `explicit_escalation` |
 | Out-of-scope topics | Regex (insurance, surgery, financing, etc.) | `out_of_scope` |
 
@@ -105,7 +107,7 @@ Intro: warm transition after the first successful FAQ answer (`QUALIFICATION_INT
 
 ### Stage 4 — Summary
 
-System prompt requires sections: Customer intent, Key details, SOP gaps, Next action, Escalation status. Default path uses `format_summary_deterministic()` so summaries are always available without an API.
+Deterministic summary (`format_summary_deterministic()`) always includes: Customer intent, Collected details, Unanswered/unsupported questions, SOP gaps, Escalation reason, Recommended next action. Optional LLM summary (`--llm-summary`) may rephrase but must not change rule-based escalation. Handoff operator notes use `handoff_note_deterministic()` by default; `--llm-handoff-note` only elaborates the explanation.
 
 ---
 

@@ -1,6 +1,6 @@
-# Transcript: Escalation — angry sentiment
+# Transcript: Escalation — angry / frustrated sentiment
 
-**Behavior:** Stage 3 — hostile language  
+**Behavior:** Stage 3 — hostile or frustrated language → immediate handoff + structured summary  
 **Command:** `sopshield -m "This is ridiculous, I'm furious about my appointment!"`
 
 ---
@@ -11,13 +11,31 @@
 
 ---
 
-## Session Summary (excerpt)
+## Session Summary — Bloom Aesthetics Clinic
 
-### 5. Escalation status
-ESCALATED — angry_sentiment
+### 1. Customer intent
+Booking or appointment — customer distressed; human follow-up required.
+
+### 2. Collected details
+- None collected.
+
+### 3. Unanswered or unsupported questions
+- None.
+
+### 4. SOP gaps
+- None recorded.
+
+### 5. Escalation reason
+- **angry_sentiment**: Customer tone appears angry or distressed.
+- Operator note: De-escalate; customer upset — prioritize callback. (angry_sentiment)
+
+### 6. Recommended next action
+Senior front-desk callback same day; acknowledge frustration first.
 
 ---
 
 **Validation notes**
-- Escalation fires before or without inventing remediation details
-- Tone remains calm; no argument with customer
+- Escalation fires on deterministic regex before any FAQ generation
+- No invented remediation or compensation
+- Summary gives operator intent, escalation reason, and concrete next step
+- Escalation logged in transcript file under `ESCALATION LOG`

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from sopshield.escalation import EscalationEvent, check_message
+from sopshield.escalation import EscalationEvent, check_message, is_immediate_escalation
 from sopshield.providers.base import LLMProvider
 from sopshield.providers.rule_based import RuleBasedProvider
 from sopshield.session import Session, Stage
@@ -16,7 +17,13 @@ from sopshield.stages.qualification import (
     process_qualification_turn,
     start_qualification,
 )
-from sopshield.stages.summary import format_summary_deterministic, generate_summary
+from sopshield.stages.summary import (
+    explain_handoff,
+    format_summary_deterministic,
+    generate_summary,
+)
+
+logger = logging.getLogger(__name__)
 
 HANDOFF_MESSAGE = (
     "I'm connecting you with our front-desk team now. "
@@ -40,10 +47,12 @@ class ConversationWorkflow:
         provider: LLMProvider | None = None,
         *,
         use_llm_summary: bool = False,
+        use_llm_handoff_note: bool = False,
     ) -> None:
         self.sop = sop
         self.provider = provider or RuleBasedProvider()
         self.use_llm_summary = use_llm_summary
+        self.use_llm_handoff_note = use_llm_handoff_note
         self.session = Session(session_id=_new_id())
 
     @classmethod
@@ -99,19 +108,13 @@ class ConversationWorkflow:
         )
 
     def _handle_faq(self, text: str) -> WorkflowReply:
-        # Pre-check user message for escalation signals
         pre = check_message(
             text,
             retrieval_confidence=1.0,
             answered_from_sop=True,
             state=self.session.escalation,
         )
-        if pre and pre.reason.value in (
-            "angry_sentiment",
-            "complaint",
-            "explicit_escalation",
-            "out_of_scope",
-        ):
+        if pre is not None and is_immediate_escalation(pre.reason):
             return self._trigger_escalation(pre)
 
         faq = answer_faq(self.sop, text, self.provider)
@@ -123,9 +126,11 @@ class ConversationWorkflow:
             answered_from_sop=faq.answered_from_sop,
             state=self.session.escalation,
         )
-        if post:
+        if post is not None:
             if not faq.answered_from_sop:
-                self.session.sop_gaps.append(text[:120])
+                snippet = text[:120]
+                self.session.sop_gaps.append(snippet)
+                self.session.unanswered_questions.append(snippet)
             return self._trigger_escalation(post, partial_reply=faq.reply)
 
         self.session.add(
@@ -135,7 +140,6 @@ class ConversationWorkflow:
             confidence=faq.confidence,
         )
 
-        # After at least one successful FAQ, move to qualification
         if self.session.faq_count >= 1 and faq.answered_from_sop:
             self.session.stage = Stage.QUALIFICATION
             qual_prompt = start_qualification(self.session)
@@ -152,11 +156,7 @@ class ConversationWorkflow:
             answered_from_sop=True,
             state=self.session.escalation,
         )
-        if pre and pre.reason.value in (
-            "angry_sentiment",
-            "complaint",
-            "explicit_escalation",
-        ):
+        if pre is not None and is_immediate_escalation(pre.reason):
             return self._trigger_escalation(pre)
 
         result = process_qualification_turn(self.session, text)
@@ -182,6 +182,12 @@ class ConversationWorkflow:
         partial_reply: str | None = None,
     ) -> WorkflowReply:
         self.session.escalation.record(event)
+        self.session.handoff_note = explain_handoff(
+            self.session,
+            self.provider if self.use_llm_handoff_note else None,
+        )
+        logger.info("Workflow escalation: %s", self.session.handoff_note)
+
         self.session.stage = Stage.ESCALATED
         parts = []
         if partial_reply:
@@ -189,6 +195,7 @@ class ConversationWorkflow:
         parts.append(HANDOFF_MESSAGE)
         msg = "\n\n".join(parts)
         self.session.add("assistant", msg, Stage.ESCALATED, escalation=event.reason.value)
+
         self.session.stage = Stage.SUMMARY
         summary = self._build_summary()
         self.session.add("assistant", summary, Stage.SUMMARY)
@@ -218,7 +225,7 @@ class ConversationWorkflow:
             try:
                 return generate_summary(self.session, self.provider)
             except Exception:
-                pass
+                logger.exception("LLM summary failed; using deterministic summary")
         return format_summary_deterministic(self.session)
 
     def _finalize_after_summary(self) -> WorkflowReply:

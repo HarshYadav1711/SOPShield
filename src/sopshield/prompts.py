@@ -35,8 +35,9 @@ QUALIFICATION_INTRO = (
 )
 
 SUMMARY_SYSTEM = """You produce structured session summaries for Bloom Aesthetics Clinic support handoffs.
-Use ONLY facts from the conversation transcript and SOP reference notes provided.
-Flag any SOP gaps explicitly. Do not invent customer details."""
+Use ONLY facts from the conversation transcript and notes provided.
+Flag any SOP gaps explicitly. Do not invent customer details.
+Escalation was already decided by rules — do not change escalation status."""
 
 SUMMARY_USER_TEMPLATE = """Transcript:
 {transcript}
@@ -44,15 +45,28 @@ SUMMARY_USER_TEMPLATE = """Transcript:
 Qualification answers collected:
 {qualification}
 
-Escalation events:
+Escalation events (rule-based, final):
 {escalations}
+
+Unanswered or unsupported customer questions:
+{unanswered}
 
 SOP gaps noted during session:
 {sop_gaps}
 
-Produce a structured summary with these sections:
+Produce a concise operator summary with these sections:
 1. Customer intent
-2. Key details
-3. SOP gaps (topics not covered by the SOP)
-4. Recommended next action
-5. Escalation status (none / escalated with reason)"""
+2. Collected details
+3. Unanswered or unsupported questions
+4. SOP gaps
+5. Escalation reason (or "None")
+6. Recommended next action"""
+
+HANDOFF_EXPLAIN_SYSTEM = """You write one short sentence for a clinic front-desk operator explaining why a chat was escalated.
+Use only the reason and customer message given. Do not invent facts or promise outcomes."""
+
+HANDOFF_EXPLAIN_USER = """Escalation reason code: {reason}
+Rule detail: {detail}
+Customer message: {message}
+
+Write one calm, professional sentence for the operator handoff note."""

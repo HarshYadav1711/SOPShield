@@ -62,6 +62,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Use provider for summary text (deterministic summary is default)",
     )
     parser.add_argument(
+        "--llm-handoff-note",
+        action="store_true",
+        help="Use provider to elaborate escalation handoff note (rules still decide escalation)",
+    )
+    parser.add_argument(
         "--message",
         "-m",
         action="append",
@@ -79,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         args.sop,
         provider,
         use_llm_summary=args.llm_summary,
+        use_llm_handoff_note=args.llm_handoff_note,
     )
 
     reply = workflow.start()
