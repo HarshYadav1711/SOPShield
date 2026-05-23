@@ -12,12 +12,24 @@ from sopshield.sop.loader import SOPDocument
 from sopshield.stages.qualification import detect_service
 
 _INTENT_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"\bhours?\b", re.I), "Office hours / scheduling"),
-    (re.compile(r"\bbook|appointment|schedule\b", re.I), "Booking or appointment"),
-    (re.compile(r"\bcancel|reschedul", re.I), "Cancellation or reschedule"),
-    (re.compile(r"\bprice|cost|fee|insurance\b", re.I), "Pricing or billing inquiry"),
-    (re.compile(r"\bcomplain|refund|furious|ridiculous|frustrated\b", re.I), "Service concern / escalation"),
+    (re.compile(r"\bhours?\b", re.I), "Hours / schedule"),
+    (re.compile(r"\bbook|appointment|schedule\b", re.I), "Booking / appointment"),
+    (re.compile(r"\bcancel|reschedul", re.I), "Cancel or reschedule"),
+    (re.compile(r"\bprice|cost|fee|insurance\b", re.I), "Pricing / billing"),
+    (re.compile(r"\bcomplain|refund|furious|ridiculous|frustrated\b", re.I), "Complaint — needs human"),
 ]
+
+_REASON_SHORT: dict[str, str] = {
+    "explicit_escalation": "Asked for a person or manager",
+    "angry_sentiment": "Upset or frustrated tone",
+    "complaint": "Complaint / billing language",
+    "pricing_negotiation": "Discount or competitor price pressure",
+    "sensitive_unsupported": "Clinical/safety — not in front-desk SOP",
+    "out_of_scope": "Outside clinic SOP scope",
+    "low_confidence": "Weak SOP match — verify before replying",
+    "sop_gap": "SOP has no answer for this",
+    "repeated_unanswered": "Two+ unanswered questions in a row",
+}
 
 
 def generate_summary(
@@ -108,11 +120,11 @@ def explain_handoff(
 def infer_customer_intent(session: Session, sop: SOPDocument) -> str:
     user_msgs = [t.content for t in session.turns if t.role == "user"]
     if not user_msgs:
-        return "Unknown — no customer messages captured."
+        return "No customer messages on file."
 
     if session.qualification_state.service_interest:
         svc = session.qualification_state.service_interest
-        return f"Inquiry about {svc} and clinic follow-up."
+        return f"{svc} — follow-up / booking."
 
     combined = " ".join(user_msgs[:3])
     for pattern, label in _INTENT_PATTERNS:
@@ -122,13 +134,13 @@ def infer_customer_intent(session: Session, sop: SOPDocument) -> str:
                 combined,
                 re.I,
             ):
-                return f"{label} — customer distressed; human follow-up required."
+                return f"{label}; needs callback."
             return label
 
-    first = user_msgs[0][:160].strip()
+    first = user_msgs[0][:120].strip()
     if len(first) < len(user_msgs[0]):
         first += "…"
-    return f"General inquiry: {first}"
+    return f"Asked: {first}"
 
 
 def format_collected_details(session: Session, sop: SOPDocument) -> str:
@@ -136,14 +148,14 @@ def format_collected_details(session: Session, sop: SOPDocument) -> str:
     if state.service_interest or state.client_status or state.contact:
         lines = [f"  - {state.compact_summary()}"]
         if state.service_detail:
-            lines.append(f"  - Detail: {state.service_detail}")
+            lines.append(f"  - Extra: {state.service_detail}")
         return "\n".join(lines)
     if not session.qualification:
         for msg in session.user_messages():
             svc = detect_service(msg, sop)
             if svc:
-                return f"  - Mentioned service (not fully qualified): {svc}"
-        return "  - None collected."
+                return f"  - Mentioned only: {svc} (not qualified)"
+        return "  - None."
     lines = []
     for q in session.qualification:
         label = q.field.replace("_", " ").title() if q.field else q.question[:40]
@@ -159,7 +171,7 @@ def format_unanswered(session: Session) -> str:
 
 def format_sop_gaps(session: Session) -> str:
     if not session.sop_gaps:
-        return "  - None recorded."
+        return "  - None."
     return "\n".join(f"  - {g}" for g in session.sop_gaps)
 
 
@@ -169,9 +181,11 @@ def format_escalation_section(session: Session, sop: SOPDocument) -> str:
 
     lines = []
     for e in session.escalation.events:
-        lines.append(f"  - **{e.reason.value}**: {e.detail}")
+        label = _REASON_SHORT.get(e.reason.value, e.detail)
+        lines.append(f"  - {e.reason.value}: {label}")
     if session.handoff_note:
-        lines.append(f"  - Operator note: {session.handoff_note}")
+        note = _strip_handoff_reason_suffix(session.handoff_note)
+        lines.append(f"  - Note: {note}")
     return "\n".join(lines)
 
 
@@ -180,27 +194,45 @@ def recommend_next_action(session: Session, sop: SOPDocument) -> str:
         state = session.qualification_state
         if state.completed and state.contact:
             return (
-                "Send booking link or confirm consultation per SOP; "
-                f"callback at {state.contact} within one business day."
+                f"Callback {state.contact} within 1 business day; "
+                "send booking link per SOP."
             )
-        return "Send booking link or confirm appointment per SOP if customer is ready."
+        return "Send booking link per SOP if they're ready to schedule."
 
     last = session.escalation.events[-1]
-    if last.reason.value in sop.escalation.handoff_notes:
-        return sop.escalation.handoff_notes[last.reason.value]
+    sop_action = _sop_next_action(last.reason.value, sop)
+    if sop_action:
+        return sop_action
 
     actions = {
-        "explicit_escalation": "Assigned agent to call or email within 4 business hours.",
-        "angry_sentiment": "Senior front-desk callback same day; acknowledge frustration first.",
-        "complaint": "Open complaint ticket; supervisor review before clinical discussion.",
-        "pricing_negotiation": "Front desk to share published pricing — no ad-hoc discounts via chat.",
-        "sensitive_unsupported": "Clinical staff to review concern — do not answer via bot.",
-        "out_of_scope": "Clarify scope politely; offer in-clinic services only.",
-        "low_confidence": "Research SOP/update KB, then respond with verified information.",
-        "sop_gap": "Document gap for SOP owner; human answers question on callback.",
-        "repeated_unanswered": "Phone intake to resolve open questions; update SOP if recurring.",
+        "explicit_escalation": "Assign agent — call or email within 4 business hours.",
+        "angry_sentiment": "Same-day callback; acknowledge frustration first.",
+        "complaint": "Open complaint ticket; billing/supervisor before clinical talk.",
+        "pricing_negotiation": "Share published pricing only — no chat discounts.",
+        "sensitive_unsupported": "Route to clinical staff — don't answer in chat.",
+        "out_of_scope": "Clarify what the clinic offers; stay in scope.",
+        "low_confidence": "Check SOP/KB, then reply with verified info.",
+        "sop_gap": "Answer on callback; flag for SOP update.",
+        "repeated_unanswered": "Phone intake for open items; update SOP if repeat.",
     }
-    return actions.get(last.reason.value, "Human agent to contact customer within one business day.")
+    return actions.get(last.reason.value, "Human follow-up within 1 business day.")
+
+
+def _sop_next_action(reason: str, sop: SOPDocument) -> str | None:
+    """Use SOP handoff_notes when they read like an action (not a label)."""
+    note = sop.escalation.handoff_notes.get(reason, "").strip()
+    if not note:
+        return None
+    if note.endswith("."):
+        return note
+    return f"{note}."
+
+
+def _strip_handoff_reason_suffix(handoff_note: str) -> str:
+    """Drop trailing '(reason_code)' from operator notes in summaries."""
+    if handoff_note.endswith(")") and " (" in handoff_note:
+        return handoff_note.rsplit(" (", 1)[0]
+    return handoff_note
 
 
 def _format_escalation_lines(session: Session) -> str:

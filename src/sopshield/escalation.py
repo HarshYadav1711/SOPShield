@@ -85,15 +85,15 @@ _IMMEDIATE_REASONS = frozenset(
 )
 
 _DEFAULT_HANDOFF_NOTES = {
-    EscalationReason.EXPLICIT_REQUEST: "Customer requested a live agent.",
-    EscalationReason.ANGRY_SENTIMENT: "De-escalate; customer upset — prioritize callback.",
-    EscalationReason.COMPLAINT: "Review complaint and billing/service notes before contact.",
-    EscalationReason.PRICING_NEGOTIATION: "Pricing outside bot scope — manager or front desk to quote.",
-    EscalationReason.SENSITIVE_UNSUPPORTED: "Clinical/safety question — route to licensed staff, not chatbot.",
-    EscalationReason.OUT_OF_SCOPE: "Out-of-scope topic — clarify what the practice can offer.",
-    EscalationReason.LOW_CONFIDENCE: "Low SOP match — verify answer manually before replying.",
-    EscalationReason.SOP_GAP: "SOP missing topic — capture answer for future FAQ update.",
-    EscalationReason.REPEATED_UNANSWERED: "Multiple unanswered questions — complete intake by phone.",
+    EscalationReason.EXPLICIT_REQUEST: "Wants a live agent.",
+    EscalationReason.ANGRY_SENTIMENT: "Upset — priority callback.",
+    EscalationReason.COMPLAINT: "Complaint — check billing notes before call.",
+    EscalationReason.PRICING_NEGOTIATION: "Pricing talk — front desk or manager quotes.",
+    EscalationReason.SENSITIVE_UNSUPPORTED: "Clinical/safety — licensed staff only.",
+    EscalationReason.OUT_OF_SCOPE: "Off-scope — clarify what we offer.",
+    EscalationReason.LOW_CONFIDENCE: "Weak SOP match — verify before replying.",
+    EscalationReason.SOP_GAP: "Not in SOP — capture answer for FAQ update.",
+    EscalationReason.REPEATED_UNANSWERED: "Multiple misses — finish intake by phone.",
 }
 
 

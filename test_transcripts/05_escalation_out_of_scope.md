@@ -22,23 +22,23 @@ python main.py --sop bloom_aesthetics_demo -m "any chance you do a financing pla
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-General inquiry: any chance you do a financing plan for laser packages?
+Asked: any chance you do a financing plan for laser packages?
 
 ### 2. Collected details
-- Mentioned service (not fully qualified): Laser hair removal
+- Mentioned only: Laser hair removal (not qualified)
 
 ### 3. Unanswered or unsupported questions
 - None.
 
 ### 4. SOP gaps
-- None recorded.
+- None.
 
 ### 5. Escalation reason
-- **out_of_scope**: Topic appears outside clinic SOP scope.
-- Operator note: Out-of-scope topic — clarify what the practice can offer. (out_of_scope)
+- out_of_scope: Outside clinic SOP scope
+- Note: Off-scope — clarify what we offer.
 
 ### 6. Recommended next action
-Clarify scope politely; offer in-clinic services only.
+Clarify what the clinic offers; stay in scope.
 
 ---
 

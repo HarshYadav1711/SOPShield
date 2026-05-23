@@ -22,23 +22,23 @@ python main.py --sop bloom_aesthetics_demo -m "this is ridiculous, I'm furious a
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-Booking or appointment — customer distressed; human follow-up required.
+Booking / appointment; needs callback.
 
 ### 2. Collected details
-- None collected.
+- None.
 
 ### 3. Unanswered or unsupported questions
 - None.
 
 ### 4. SOP gaps
-- None recorded.
+- None.
 
 ### 5. Escalation reason
-- **angry_sentiment**: Customer tone appears angry or distressed.
-- Operator note: De-escalate; customer upset — prioritize callback. (angry_sentiment)
+- angry_sentiment: Upset or frustrated tone
+- Note: Upset — priority callback.
 
 ### 6. Recommended next action
-Senior front-desk callback same day; acknowledge frustration first.
+Same-day callback; acknowledge frustration first.
 
 ---
 

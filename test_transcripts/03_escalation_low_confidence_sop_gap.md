@@ -24,10 +24,10 @@ I'm connecting you with our front-desk team now. They'll follow up shortly at th
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-General inquiry: can you ship your products overseas?
+Asked: can you ship your products overseas?
 
 ### 2. Collected details
-- None collected.
+- None.
 
 ### 3. Unanswered or unsupported questions
 - can you ship your products overseas?
@@ -36,11 +36,11 @@ General inquiry: can you ship your products overseas?
 - can you ship your products overseas?
 
 ### 5. Escalation reason
-- **low_confidence**: Retrieval confidence 0.00 below threshold 0.35.
-- Operator note: Low SOP match — verify answer manually before replying. (low_confidence)
+- low_confidence: Weak SOP match — verify before replying
+- Note: Weak SOP match — verify before replying.
 
 ### 6. Recommended next action
-Research SOP/update KB, then respond with verified information.
+Check SOP/KB, then reply with verified info.
 
 ---
 

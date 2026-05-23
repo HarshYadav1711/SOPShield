@@ -39,10 +39,9 @@ def qualification_intro(sop: SOPDocument) -> str:
 
 
 def summary_system(sop: SOPDocument) -> str:
-    return f"""You produce structured session summaries for {sop.business_name} support handoffs.
-Use ONLY facts from the conversation transcript and notes provided.
-Flag any SOP gaps explicitly. Do not invent customer details.
-Escalation was already decided by rules — do not change escalation status."""
+    return f"""You write internal handoff notes for {sop.business_name} front desk — not customer-facing copy.
+Use ONLY facts from the transcript and notes. Short, plain sentences. No filler or corporate tone.
+Flag SOP gaps plainly. Do not invent details. Escalation is final — do not change it."""
 
 
 SUMMARY_USER_TEMPLATE = """Transcript:
@@ -60,7 +59,7 @@ Unanswered or unsupported customer questions:
 SOP gaps noted during session:
 {sop_gaps}
 
-Produce a concise operator summary with these sections:
+Write terse internal notes (support-ticket style) under these headings:
 1. Customer intent
 2. Collected details
 3. Unanswered or unsupported questions

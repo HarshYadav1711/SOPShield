@@ -22,23 +22,23 @@ python main.py --sop bloom_aesthetics_demo -m "what's your cheapest option? anot
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-Pricing or billing inquiry
+Asked: what's your cheapest option? another clinic quoted me less
 
 ### 2. Collected details
-- None collected.
+- None.
 
 ### 3. Unanswered or unsupported questions
 - None.
 
 ### 4. SOP gaps
-- None recorded.
+- None.
 
 ### 5. Escalation reason
-- **pricing_negotiation**: Pricing negotiation or discount pressure beyond published SOP rates.
-- Operator note: Pricing outside bot scope — manager or front desk to quote. (pricing_negotiation)
+- pricing_negotiation: Discount or competitor price pressure
+- Note: Pricing talk — front desk or manager quotes.
 
 ### 6. Recommended next action
-Front desk to share published pricing — no ad-hoc discounts via chat.
+Share published pricing only — no chat discounts.
 
 ---
 

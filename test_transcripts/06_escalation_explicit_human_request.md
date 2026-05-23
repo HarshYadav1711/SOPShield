@@ -20,23 +20,23 @@ python main.py --sop bloom_aesthetics_demo -m "sorry but I really need to speak 
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-General inquiry: sorry but I really need to speak to a manager
+Asked: sorry but I really need to speak to a manager
 
 ### 2. Collected details
-- None collected.
+- None.
 
 ### 3. Unanswered or unsupported questions
 - None.
 
 ### 4. SOP gaps
-- None recorded.
+- None.
 
 ### 5. Escalation reason
-- **explicit_escalation**: Customer explicitly asked for a human team member.
-- Operator note: Customer requested a live agent. (explicit_escalation)
+- explicit_escalation: Asked for a person or manager
+- Note: Wants a live agent.
 
 ### 6. Recommended next action
-Assigned agent to call or email within 4 business hours.
+Assign agent — call or email within 4 business hours.
 
 ---
 

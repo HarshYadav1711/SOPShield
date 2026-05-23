@@ -20,23 +20,23 @@ python main.py --sop bloom_aesthetics_demo -m "I want to complain — pretty sur
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-Booking or appointment
+Complaint — needs human; needs callback.
 
 ### 2. Collected details
-- Mentioned service (not fully qualified): Dermal fillers
+- Mentioned only: Dermal fillers (not qualified)
 
 ### 3. Unanswered or unsupported questions
 - None.
 
 ### 4. SOP gaps
-- None recorded.
+- None.
 
 ### 5. Escalation reason
-- **complaint**: Complaint, refund, or service-harm language detected.
-- Operator note: Review complaint and billing/service notes before contact. (complaint)
+- complaint: Complaint / billing language
+- Note: Complaint — check billing notes before call.
 
 ### 6. Recommended next action
-Open complaint ticket; supervisor review before clinical discussion.
+Open complaint ticket; billing/supervisor before clinical talk.
 
 ---
 

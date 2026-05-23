@@ -37,9 +37,10 @@ def test_summary_angry_escalation():
 
     summary = format_summary_deterministic(wf.session, wf.sop)
     assert "angry_sentiment" in summary
-    assert "distressed" in infer_customer_intent(wf.session, wf.sop).lower() or "concern" in summary.lower()
+    intent = infer_customer_intent(wf.session, wf.sop).lower()
+    assert "callback" in intent or "complaint" in intent or "upset" in summary.lower()
     assert wf.session.handoff_note
-    assert "De-escalate" in wf.session.handoff_note or "upset" in wf.session.handoff_note.lower()
+    assert "upset" in wf.session.handoff_note.lower() or "priority" in wf.session.handoff_note.lower()
 
 
 def test_summary_tracks_unanswered_on_sop_gap():

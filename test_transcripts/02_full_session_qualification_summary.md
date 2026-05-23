@@ -44,7 +44,7 @@ _Captured during intake:_
 ## Session Summary — Bloom Aesthetics Clinic
 
 ### 1. Customer intent
-Inquiry about Botox and clinic follow-up.
+Botox — follow-up / booking.
 
 ### 2. Collected details
 - Service: Botox · Client: new · Contact: 555-0142
@@ -53,13 +53,13 @@ Inquiry about Botox and clinic follow-up.
 - None.
 
 ### 4. SOP gaps
-- None recorded.
+- None.
 
 ### 5. Escalation reason
 None.
 
 ### 6. Recommended next action
-Send booking link or confirm consultation per SOP; callback at 555-0142 within one business day.
+Callback 555-0142 within 1 business day; send booking link per SOP.
 
 ---
 
