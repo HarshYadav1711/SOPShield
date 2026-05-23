@@ -1,0 +1,4 @@
+# Runtime: stdlib only (default rule-based provider)
+# Install package: pip install -e .
+# Dev: pip install -e ".[dev]"
+# Optional OpenAI: pip install -e ".[openai]"
