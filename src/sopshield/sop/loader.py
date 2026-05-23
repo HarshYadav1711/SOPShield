@@ -93,11 +93,19 @@ def list_sops(data_dir: Path | None = None) -> list[str]:
         return []
     ids: list[str] = []
     for path in sorted(root.glob("*.json")):
-        sop_id = path.stem
-        if sop_id.endswith("_sop"):
-            sop_id = sop_id[: -len("_sop")]
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            document = payload.get("document", {})
+            sop_id = str(document.get("id", path.stem)).strip() or path.stem
+        except (json.JSONDecodeError, OSError):
+            sop_id = path.stem
         ids.append(sop_id)
-    return ids
+    return sorted(set(ids))
+
+
+_SOP_ALIASES: dict[str, str] = {
+    "bloom_aesthetics": "bloom_aesthetics_demo",
+}
 
 
 def resolve_sop_path(name_or_path: str | Path, data_dir: Path | None = None) -> Path:
@@ -108,10 +116,21 @@ def resolve_sop_path(name_or_path: str | Path, data_dir: Path | None = None) -> 
 
     root = data_dir or data_directory()
     stem = candidate.stem if candidate.suffix else str(name_or_path)
-    for name in (stem, f"{stem}_sop", f"{stem}_demo"):
+    stem = _SOP_ALIASES.get(stem, stem)
+
+    for name in (stem, f"{stem}_demo"):
         path = root / f"{name}.json"
         if path.is_file():
             return path.resolve()
+
+    for path in sorted(root.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            document = payload.get("document", {})
+            if str(document.get("id", "")).strip() == stem:
+                return path.resolve()
+        except (json.JSONDecodeError, OSError):
+            continue
 
     path = root / f"{stem}.json"
     if path.is_file():
@@ -123,13 +142,17 @@ def resolve_sop_path(name_or_path: str | Path, data_dir: Path | None = None) -> 
 
 
 def load_sop(path: Path | str) -> SOPDocument:
+    from sopshield.sop.validation import ensure_valid_sop
+
     path = Path(path)
     if path.suffix.lower() == ".json":
-        return _load_json(path)
-    raw = path.read_text(encoding="utf-8")
-    sections = _parse_sections(raw)
-    business_name = _infer_business_name(raw, path.stem)
-    doc = _build_document(path, path.stem, business_name, sections, raw, {})
+        doc = _load_json(path)
+    else:
+        raw = path.read_text(encoding="utf-8")
+        sections = _parse_sections(raw)
+        business_name = _infer_business_name(raw, path.stem)
+        doc = _build_document(path, path.stem, business_name, sections, raw, {})
+    ensure_valid_sop(doc)
     return doc
 
 

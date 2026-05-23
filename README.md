@@ -110,7 +110,7 @@ sopshield --provider openai --llm-summary
 ## Project layout
 
 ```
-data/                    # SOP JSON (and optional .md) per business
+data/                    # Canonical SOP JSON per business (see data/README.md)
 main.py                  # CLI wrapper
 src/sopshield/
   cli.py                 # Argument parsing, interactive loop
@@ -170,7 +170,7 @@ You can add embeddings, a web channel, or CRM webhooks later without rewriting t
 1. Add `data/your_clinic.json` with `document`, `contact`, `conversation`, `qualification`, `escalation`, and `sections`.
 2. Run `python main.py --sop your_clinic`.
 
-Factual answers always originate from that file. See `data/bloom_aesthetics_demo.json` for a complete example.
+Factual answers always originate from that file. See `data/README.md` and `data/bloom_aesthetics_demo.json` for the schema and a complete example.
 
 ---
 

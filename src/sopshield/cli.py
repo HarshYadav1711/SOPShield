@@ -17,6 +17,7 @@ from sopshield.providers.base import LLMProvider
 from sopshield.providers.ollama import OllamaProvider
 from sopshield.providers.rule_based import RuleBasedProvider
 from sopshield.sop.loader import data_directory, list_sops, resolve_sop_path
+from sopshield.sop.validation import SOPValidationError
 from sopshield.workflow import ConversationWorkflow
 
 DEFAULT_SOP = "bloom_aesthetics_demo"
@@ -102,12 +103,16 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     provider = _build_provider(args.provider)
-    workflow = ConversationWorkflow.from_paths(
-        sop_path,
-        provider,
-        use_llm_summary=args.llm_summary,
-        use_llm_handoff_note=args.llm_handoff_note,
-    )
+    try:
+        workflow = ConversationWorkflow.from_paths(
+            sop_path,
+            provider,
+            use_llm_summary=args.llm_summary,
+            use_llm_handoff_note=args.llm_handoff_note,
+        )
+    except SOPValidationError as exc:
+        print(exc.message(), file=sys.stderr)
+        return 1
 
     reply = workflow.start()
     print(f"\nAssistant: {reply.message}\n")

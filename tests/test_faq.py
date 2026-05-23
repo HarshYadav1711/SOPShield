@@ -10,7 +10,6 @@ from sopshield.stages.faq import answer_faq
 from sopshield.workflow import ConversationWorkflow
 
 SOP_JSON = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_demo.json"
-SOP_MD = Path(__file__).resolve().parents[1] / "data" / "bloom_aesthetics_sop.md"
 
 
 def test_load_structured_json_sop():
