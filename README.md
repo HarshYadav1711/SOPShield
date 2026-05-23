@@ -13,6 +13,19 @@ Workflow logic—not model judgment—defines reliability:
 
 Facts do not come from model memory. If excerpts do not cover a topic, the assistant states that and escalates instead of guessing. Optional `ollama` / `openai` adapters may rephrase FAQ or summary text only; stages, thresholds, and escalation stay unchanged.
 
+```mermaid
+flowchart TD
+    A[Customer message] --> B{Pre-escalation}
+    B -->|Trigger| G[Conversation summary]
+    B --> C[SOP grounding]
+    C --> D{Confident?}
+    D -->|No| E[Escalate]
+    D -->|Yes| F[Answer]
+    E --> G
+    F --> H[Lead qualification]
+    H --> G
+```
+
 **Runtime path:** `main.py` → `sopshield.cli` → `workflow.py` (stages + escalation). Application code under `src/sopshield/`; SOP content in `data/` as versioned JSON.
 
 **Default runtime:** offline with `--provider rule` (no API keys, no GPU). Optional **local LLM** (Ollama) or **cloud API** (OpenAI) backends affect phrasing at generative call sites only.
